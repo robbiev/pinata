@@ -135,7 +135,11 @@ func (p *slicePinata) StringAtIndex(index int) string {
 	if p.err != nil {
 		return ""
 	}
-	return pinata.String()
+	s := pinata.String()
+	if pinata.Error() != nil {
+		p.StringAtIndex(index)
+	}
+	return s
 }
 
 func (p *slicePinata) Contents() interface{} {
@@ -174,7 +178,11 @@ func (p *mapPinata) StringAtPath(pathStart string, path ...string) string {
 	if p.err != nil {
 		return ""
 	}
-	return pinata.String()
+	s := pinata.String()
+	if pinata.Error() != nil {
+		p.StringAtPath(pathStart, path...)
+	}
+	return s
 }
 
 func (p *mapPinata) Contents() interface{} {

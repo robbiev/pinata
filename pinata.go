@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Holder of a value with methods for extracting data from it.
+// Pinata holds a value and offers methods for extracting data from it.
 type Pinata interface {
 	Contents() interface{}
 	Error() error
@@ -19,10 +19,8 @@ type Pinata interface {
 	PinataAtIndex(int) Pinata
 }
 
-// Creates a new Pinata. Instances returned are not thread safe.
+// New creates a new Pinata. Instances returned are not thread safe.
 func New(contents interface{}) Pinata {
-	// TODO create constructor that takes a func returning the interface{} value
-	// and error for use with the JSON libs
 	switch t := contents.(type) {
 	default:
 		return &otherPinata{contents: t}
@@ -37,12 +35,12 @@ type basePinata struct {
 	err error
 }
 
-func (bp *basePinata) Error() error {
-	return bp.err
+func (p *basePinata) Error() error {
+	return p.err
 }
 
-func (bp *basePinata) ClearError() {
-	bp.err = nil
+func (p *basePinata) ClearError() {
+	p.err = nil
 }
 
 func (p *basePinata) String() string {
@@ -73,22 +71,22 @@ func (p *basePinata) StringAtIndex(index int) string {
 	return ""
 }
 
-func (fp *basePinata) Contents() interface{} {
+func (p *basePinata) Contents() interface{} {
 	return nil
 }
 
-func (bp *basePinata) indexFail(method string, index int) {
-	if bp.err != nil {
+func (p *basePinata) indexFail(method string, index int) {
+	if p.err != nil {
 		return
 	}
-	bp.err = fmt.Errorf("%s(%d): not a slice so can't access by index", method, index)
+	p.err = fmt.Errorf("%s(%d): not a slice so can't access by index", method, index)
 }
 
-func (bp *basePinata) pathFail(method, pathStart string, path []string) {
-	if bp.err != nil {
+func (p *basePinata) pathFail(method, pathStart string, path []string) {
+	if p.err != nil {
 		return
 	}
-	bp.err = fmt.Errorf(`%s("%s"): not a map so can't access by path`, method, strings.Join(toSlice(pathStart, path), `", "`))
+	p.err = fmt.Errorf(`%s("%s"): not a map so can't access by path`, method, strings.Join(toSlice(pathStart, path), `", "`))
 }
 
 type otherPinata struct {

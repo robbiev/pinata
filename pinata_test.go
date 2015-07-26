@@ -66,6 +66,9 @@ func TestMapPinataFailure(t *testing.T) {
 	if p.PinataAtPath("one", "two", "three", "four") != nil {
 		t.Error()
 	}
+	if p.Error() == nil {
+		t.Error()
+	}
 }
 
 func TestMapPinataDontPropagateErrorToParent(t *testing.T) {

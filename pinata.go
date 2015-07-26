@@ -127,13 +127,18 @@ func (p *mapPinata) PinataAtPath(pathStart string, path ...string) Pinata {
 	}
 	if v, ok := p.contents[pathStart]; ok {
 		currentPinata := New(v)
-		if len(path) == 0 {
-			return currentPinata
-		} else {
-			first, rest := path[len(path)-1], path[:len(path)-1]
-			return currentPinata.PinataAtPath(first, rest...)
+		rest := path
+		for len(rest) > 0 {
+			tmp := currentPinata.PinataAtPath(rest[0])
+			rest = rest[1:len(rest)]
+			if currentPinata.Error() != nil {
+				goto Fail
+			}
+			currentPinata = tmp
 		}
+		return currentPinata
 	}
+Fail:
 	p.pathFail("PinataAtPath", pathStart, path)
 	return nil
 }

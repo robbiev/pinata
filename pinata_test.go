@@ -63,7 +63,23 @@ func TestMapPinataFailure(t *testing.T) {
 	m["one"] = m2
 	m2["two"] = "three"
 	p := New(m)
-	if p.PinataAtPath("one", "two", "three", "four").PinataAtPath("five").Error() == nil {
+	if p.PinataAtPath("one", "two", "three", "four") != nil {
+		t.Error()
+	}
+}
+
+func TestMapPinataDontPropagateErrorToParent(t *testing.T) {
+	m := make(map[string]interface{})
+	m2 := make(map[string]interface{})
+	m["one"] = m2
+	m2["two"] = "three"
+	p := New(m)
+	child := p.PinataAtPath("one")
+	_ = child.String()
+	if p.Error() != nil {
+		t.Error()
+	}
+	if child.Error() == nil {
 		t.Error()
 	}
 }

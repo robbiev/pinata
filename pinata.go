@@ -19,20 +19,17 @@ type Pinata interface {
 	PinataAtIndex(int32) Pinata
 }
 
-// TODO create constructor that takes a func returning the interface{} value
-// and error for use with the JSON libs
+// Creates a new Pinata. Instances returned are not thread safe.
 func New(contents interface{}) Pinata {
-	return newPinata(contents, basePinata{})
-}
-
-func newPinata(contents interface{}, base basePinata) Pinata {
+	// TODO create constructor that takes a func returning the interface{} value
+	// and error for use with the JSON libs
 	switch t := contents.(type) {
 	default:
-		return &otherPinata{contents: t, basePinata: base}
+		return &otherPinata{contents: t}
 	case map[string]interface{}:
-		return &mapPinata{contents: t, basePinata: base}
+		return &mapPinata{contents: t}
 	case []interface{}:
-		return &base
+		return &basePinata{}
 	}
 }
 
@@ -58,12 +55,12 @@ func (p *basePinata) String() string {
 
 func (p *basePinata) PinataAtIndex(index int32) Pinata {
 	p.indexFail("PinataAtIndex", index)
-	return &basePinata{err: p.err}
+	return nil
 }
 
 func (p *basePinata) PinataAtPath(pathStart string, path ...string) Pinata {
 	p.pathFail("PinataAtPath", pathStart, path)
-	return &basePinata{err: p.err}
+	return nil
 }
 
 func (p *basePinata) StringAtPath(pathStart string, path ...string) string {
@@ -126,10 +123,10 @@ type mapPinata struct {
 
 func (p *mapPinata) PinataAtPath(pathStart string, path ...string) Pinata {
 	if p.err != nil {
-		return &basePinata{err: p.Error()}
+		return nil
 	}
 	if v, ok := p.contents[pathStart]; ok {
-		currentPinata := newPinata(v, p.basePinata)
+		currentPinata := New(v)
 		if len(path) == 0 {
 			return currentPinata
 		} else {
@@ -138,7 +135,7 @@ func (p *mapPinata) PinataAtPath(pathStart string, path ...string) Pinata {
 		}
 	}
 	p.pathFail("PinataAtPath", pathStart, path)
-	return &basePinata{err: p.Error()}
+	return nil
 }
 
 func (p *mapPinata) StringAtPath(pathStart string, path ...string) string {

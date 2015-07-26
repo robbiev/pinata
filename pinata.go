@@ -10,9 +10,11 @@ type Pinata interface {
 	Contents() interface{}
 	Error() error
 	ClearError()
-	StringPath(string, ...string) string
+	StringAtPath(string, ...string) string
 	String() string
-	StringIndex(int32) string
+	StringAtIndex(int32) string
+	PinataAtPath(string, ...string) Pinata
+	PinataAtIndex(int32) Pinata
 }
 
 type basePinata struct {
@@ -25,6 +27,20 @@ func (bp *basePinata) Error() error {
 
 func (bp *basePinata) ClearError() {
 	bp.err = nil
+}
+
+func (bp *basePinata) indexFail(method string, index int32) {
+	if bp.err != nil {
+		return
+	}
+	bp.err = fmt.Errorf("%s(%d): not a slice so can't access by index", method, index)
+}
+
+func (bp *basePinata) pathFail(method, pathStart string, path []string) {
+	if bp.err != nil {
+		return
+	}
+	bp.err = fmt.Errorf(`%s("%s"): not a map so can't access by path`, method, strings.Join(toSlice(pathStart, path), `", "`))
 }
 
 type slicePinata struct {
@@ -49,32 +65,47 @@ func New(contents interface{}) Pinata {
 }
 
 func (p *otherPinata) String() string {
-	if p.basePinata.err != nil {
+	if p.err != nil {
 		return ""
 	}
 	if v, ok := p.contents.(string); ok {
 		return v
 	}
-	p.basePinata.err = fmt.Errorf("String(): not a string")
+	p.err = fmt.Errorf("String(): not a string")
 	return ""
 }
 
-func (p *otherPinata) StringPath(pathStart string, path ...string) string {
-	if p.basePinata.err != nil {
-		return ""
-	}
-	p.basePinata.err = fmt.Errorf("StringPath(%s, %s): not a map so can't access by path", pathStart, strings.Join(path, ", "))
+func (p *otherPinata) PinataAtIndex(index int32) Pinata {
+	p.indexFail("PinataAtIndex", index)
+	return nil
+}
+
+func (p *otherPinata) PinataAtPath(pathStart string, path ...string) Pinata {
+	p.pathFail("PinataAtPath", pathStart, path)
+	return nil
+}
+
+func (p *otherPinata) StringAtPath(pathStart string, path ...string) string {
+	p.pathFail("StringAtPath", pathStart, path)
 	return ""
 }
 
-func (p *otherPinata) StringIndex(index int32) string {
-	if p.basePinata.err != nil {
-		return ""
-	}
-	p.basePinata.err = fmt.Errorf("StringIndex(%d): not a slice so can't access by index", index)
+func (p *otherPinata) StringAtIndex(index int32) string {
+	p.indexFail("StringAtIndex", index)
 	return ""
 }
 
 func (p *otherPinata) Contents() interface{} {
 	return p.contents
+}
+
+func toSlice(first string, rest []string) []string {
+	slice := make([]string, len(rest)+1)
+	i := 0
+	slice[i] = first
+	for _, v := range rest {
+		i++
+		slice[i] = v
+	}
+	return slice
 }

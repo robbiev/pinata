@@ -1,3 +1,5 @@
+// Package pinata is a utility to beat data out of interface{}, []interface{}
+// and map[string]interface{}.
 package pinata
 
 import (
@@ -5,7 +7,7 @@ import (
 	"strings"
 )
 
-// TODO allow sub-pinatas, propagate the errors
+// Holder of a value with methods for extracting data from it.
 type Pinata interface {
 	Contents() interface{}
 	Error() error
@@ -15,6 +17,23 @@ type Pinata interface {
 	StringAtIndex(int32) string
 	PinataAtPath(string, ...string) Pinata
 	PinataAtIndex(int32) Pinata
+}
+
+// TODO create constructor that takes a func returning the interface{} value
+// and error for use with the JSON libs
+func New(contents interface{}) Pinata {
+	return newPinata(contents, basePinata{})
+}
+
+func newPinata(contents interface{}, base basePinata) Pinata {
+	switch t := contents.(type) {
+	default:
+		return &otherPinata{contents: t, basePinata: base}
+	case map[string]interface{}:
+		return &mapPinata{contents: t, basePinata: base}
+	case []interface{}:
+		return &base
+	}
 }
 
 type basePinata struct {
@@ -27,6 +46,38 @@ func (bp *basePinata) Error() error {
 
 func (bp *basePinata) ClearError() {
 	bp.err = nil
+}
+
+func (p *basePinata) String() string {
+	if p.err != nil {
+		return ""
+	}
+	p.err = fmt.Errorf("String(): not a string")
+	return ""
+}
+
+func (p *basePinata) PinataAtIndex(index int32) Pinata {
+	p.indexFail("PinataAtIndex", index)
+	return &basePinata{err: p.err}
+}
+
+func (p *basePinata) PinataAtPath(pathStart string, path ...string) Pinata {
+	p.pathFail("PinataAtPath", pathStart, path)
+	return &basePinata{err: p.err}
+}
+
+func (p *basePinata) StringAtPath(pathStart string, path ...string) string {
+	p.pathFail("StringAtPath", pathStart, path)
+	return ""
+}
+
+func (p *basePinata) StringAtIndex(index int32) string {
+	p.indexFail("StringAtIndex", index)
+	return ""
+}
+
+func (fp *basePinata) Contents() interface{} {
+	return nil
 }
 
 func (bp *basePinata) indexFail(method string, index int32) {
@@ -43,25 +94,9 @@ func (bp *basePinata) pathFail(method, pathStart string, path []string) {
 	bp.err = fmt.Errorf(`%s("%s"): not a map so can't access by path`, method, strings.Join(toSlice(pathStart, path), `", "`))
 }
 
-type slicePinata struct {
-	basePinata
-	contents []interface{}
-}
-
-type mapPinata struct {
-	basePinata
-	contents map[string]interface{}
-}
-
 type otherPinata struct {
 	basePinata
 	contents interface{}
-}
-
-// TODO create constructor that takes a func returning the interface{} value
-// and error for use with the JSON libs
-func New(contents interface{}) Pinata {
-	return &otherPinata{contents: contents}
 }
 
 func (p *otherPinata) String() string {
@@ -75,27 +110,46 @@ func (p *otherPinata) String() string {
 	return ""
 }
 
-func (p *otherPinata) PinataAtIndex(index int32) Pinata {
-	p.indexFail("PinataAtIndex", index)
-	return nil
-}
-
-func (p *otherPinata) PinataAtPath(pathStart string, path ...string) Pinata {
-	p.pathFail("PinataAtPath", pathStart, path)
-	return nil
-}
-
-func (p *otherPinata) StringAtPath(pathStart string, path ...string) string {
-	p.pathFail("StringAtPath", pathStart, path)
-	return ""
-}
-
-func (p *otherPinata) StringAtIndex(index int32) string {
-	p.indexFail("StringAtIndex", index)
-	return ""
-}
-
 func (p *otherPinata) Contents() interface{} {
+	return p.contents
+}
+
+type slicePinata struct {
+	basePinata
+	contents []interface{}
+}
+
+type mapPinata struct {
+	basePinata
+	contents map[string]interface{}
+}
+
+func (p *mapPinata) PinataAtPath(pathStart string, path ...string) Pinata {
+	if p.err != nil {
+		return &basePinata{err: p.Error()}
+	}
+	if v, ok := p.contents[pathStart]; ok {
+		currentPinata := newPinata(v, p.basePinata)
+		if len(path) == 0 {
+			return currentPinata
+		} else {
+			first, rest := path[len(path)-1], path[:len(path)-1]
+			return currentPinata.PinataAtPath(first, rest...)
+		}
+	}
+	p.pathFail("PinataAtPath", pathStart, path)
+	return &basePinata{err: p.Error()}
+}
+
+func (p *mapPinata) StringAtPath(pathStart string, path ...string) string {
+	pinata := p.PinataAtPath(pathStart, path...)
+	if p.err != nil {
+		return ""
+	}
+	return pinata.String()
+}
+
+func (p *mapPinata) Contents() interface{} {
 	return p.contents
 }
 

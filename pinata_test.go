@@ -7,7 +7,7 @@ import (
 
 const str = "test string"
 
-func TestValidString(t *testing.T) {
+func TestOtherPinataValidString(t *testing.T) {
 	p := New(str)
 	result := p.String()
 	if p.Error() != nil {
@@ -18,7 +18,7 @@ func TestValidString(t *testing.T) {
 	}
 }
 
-func TestInvalidString(t *testing.T) {
+func TestOtherPinataInvalidString(t *testing.T) {
 	p := New(1)
 	_ = p.String()
 	if p.Error() == nil {
@@ -26,7 +26,7 @@ func TestInvalidString(t *testing.T) {
 	}
 }
 
-func TestInvalidStringAtPath(t *testing.T) {
+func TestOtherPinataInvalidStringAtPath(t *testing.T) {
 	p := New(str)
 	_ = p.StringAtPath("a", "b", "c")
 	if p.Error() == nil {
@@ -36,12 +36,34 @@ func TestInvalidStringAtPath(t *testing.T) {
 	}
 }
 
-func TestInvalidStringAtPath2(t *testing.T) {
+func TestOtherPinataInvalidStringAtPath2(t *testing.T) {
 	p := New(str)
 	_ = p.StringAtPath("a")
 	if p.Error() == nil {
 		t.Error()
 	} else {
 		fmt.Println(p.Error())
+	}
+}
+
+func TestMapPinata(t *testing.T) {
+	m := make(map[string]interface{})
+	m2 := make(map[string]interface{})
+	m["one"] = m2
+	m2["two"] = "three"
+	p := New(m)
+	if "three" != p.StringAtPath("one", "two") {
+		t.Error()
+	}
+}
+
+func TestMapPinataFailure(t *testing.T) {
+	m := make(map[string]interface{})
+	m2 := make(map[string]interface{})
+	m["one"] = m2
+	m2["two"] = "three"
+	p := New(m)
+	if p.PinataAtPath("one", "two", "three", "four").PinataAtPath("five").Error() == nil {
+		t.Error()
 	}
 }

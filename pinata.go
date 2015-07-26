@@ -14,9 +14,9 @@ type Pinata interface {
 	ClearError()
 	StringAtPath(string, ...string) string
 	String() string
-	StringAtIndex(int32) string
+	StringAtIndex(int) string
 	PinataAtPath(string, ...string) Pinata
-	PinataAtIndex(int32) Pinata
+	PinataAtIndex(int) Pinata
 }
 
 // Creates a new Pinata. Instances returned are not thread safe.
@@ -53,7 +53,7 @@ func (p *basePinata) String() string {
 	return ""
 }
 
-func (p *basePinata) PinataAtIndex(index int32) Pinata {
+func (p *basePinata) PinataAtIndex(index int) Pinata {
 	p.indexFail("PinataAtIndex", index)
 	return nil
 }
@@ -68,7 +68,7 @@ func (p *basePinata) StringAtPath(pathStart string, path ...string) string {
 	return ""
 }
 
-func (p *basePinata) StringAtIndex(index int32) string {
+func (p *basePinata) StringAtIndex(index int) string {
 	p.indexFail("StringAtIndex", index)
 	return ""
 }
@@ -77,7 +77,7 @@ func (fp *basePinata) Contents() interface{} {
 	return nil
 }
 
-func (bp *basePinata) indexFail(method string, index int32) {
+func (bp *basePinata) indexFail(method string, index int) {
 	if bp.err != nil {
 		return
 	}
@@ -114,6 +114,32 @@ func (p *otherPinata) Contents() interface{} {
 type slicePinata struct {
 	basePinata
 	contents []interface{}
+}
+
+func (p *slicePinata) PinataAtIndex(index int) Pinata {
+	if p.err != nil {
+		return nil
+	}
+	if index >= 0 && index < len(p.contents) {
+		return New(p.contents[index])
+	}
+	p.indexFail("PinataAtIndex", index)
+	return nil
+}
+
+func (p *slicePinata) StringAtIndex(index int) string {
+	if p.err != nil {
+		return ""
+	}
+	pinata := p.PinataAtIndex(index)
+	if p.err != nil {
+		return ""
+	}
+	return pinata.String()
+}
+
+func (p *slicePinata) Contents() interface{} {
+	return p.contents
 }
 
 type mapPinata struct {

@@ -27,7 +27,7 @@ func New(contents interface{}) Pinata {
 	case map[string]interface{}:
 		return &mapPinata{contents: t}
 	case []interface{}:
-		return &basePinata{}
+		return &slicePinata{}
 	}
 }
 
@@ -52,22 +52,22 @@ func (p *basePinata) String() string {
 }
 
 func (p *basePinata) PinataAtIndex(index int) Pinata {
-	p.indexFail("PinataAtIndex", index)
+	p.indexUnsupported("PinataAtIndex", index)
 	return nil
 }
 
 func (p *basePinata) PinataAtPath(pathStart string, path ...string) Pinata {
-	p.pathFail("PinataAtPath", pathStart, path)
+	p.pathUnsupported("PinataAtPath", pathStart, path)
 	return nil
 }
 
 func (p *basePinata) StringAtPath(pathStart string, path ...string) string {
-	p.pathFail("StringAtPath", pathStart, path)
+	p.pathUnsupported("StringAtPath", pathStart, path)
 	return ""
 }
 
 func (p *basePinata) StringAtIndex(index int) string {
-	p.indexFail("StringAtIndex", index)
+	p.indexUnsupported("StringAtIndex", index)
 	return ""
 }
 
@@ -75,18 +75,34 @@ func (p *basePinata) Contents() interface{} {
 	return nil
 }
 
-func (p *basePinata) indexFail(method string, index int) {
-	if p.err != nil {
-		return
-	}
-	p.err = fmt.Errorf("%s(%d): not a slice so can't access by index", method, index)
+func (p *basePinata) indexErrorf(method string, index int, msg string) error {
+	return fmt.Errorf("%s(%d): %s", method, index, msg)
 }
 
-func (p *basePinata) pathFail(method, pathStart string, path []string) {
+func (p *basePinata) indexUnsupported(method string, index int) {
 	if p.err != nil {
 		return
 	}
-	p.err = fmt.Errorf(`%s("%s"): not a map so can't access by path`, method, strings.Join(toSlice(pathStart, path), `", "`))
+	p.err = p.indexErrorf(method, index, "not a slice so can't access by index")
+}
+
+func (p *basePinata) setIndexOutOfRange(method string, index int, contents []interface{}) bool {
+	if index < 0 || index >= len(contents) {
+		p.err = p.indexErrorf(method, index, fmt.Sprintf("index out of range: %d", index))
+		return true
+	}
+	return false
+}
+
+func (p *basePinata) pathErrorf(method, pathStart string, path []string, msg string) error {
+	return fmt.Errorf(`%s("%s"): %s`, method, strings.Join(toSlice(pathStart, path), `", "`), msg)
+}
+
+func (p *basePinata) pathUnsupported(method, pathStart string, path []string) {
+	if p.err != nil {
+		return
+	}
+	p.err = p.pathErrorf(method, pathStart, path, "not a map so can't access by path")
 }
 
 type otherPinata struct {
@@ -114,28 +130,29 @@ type slicePinata struct {
 	contents []interface{}
 }
 
-func (p *slicePinata) PinataAtIndex(index int) Pinata {
+func (p *slicePinata) pinataAtIndex(method string, index int) Pinata {
 	if p.err != nil {
 		return nil
 	}
-	if index >= 0 && index < len(p.contents) {
-		return New(p.contents[index])
+	if p.setIndexOutOfRange(method, index, p.contents) {
+		return nil
 	}
-	p.indexFail("PinataAtIndex", index)
-	return nil
+	return New(p.contents[index])
+}
+
+func (p *slicePinata) PinataAtIndex(index int) Pinata {
+	return p.pinataAtIndex("PinataAtIndex", index)
 }
 
 func (p *slicePinata) StringAtIndex(index int) string {
-	if p.err != nil {
-		return ""
-	}
-	pinata := p.PinataAtIndex(index)
+	const method = "StringAtIndex"
+	pinata := p.pinataAtIndex(method, index)
 	if p.err != nil {
 		return ""
 	}
 	s := pinata.String()
 	if pinata.Error() != nil {
-		p.StringAtIndex(index)
+		p.err = p.indexErrorf(method, index, "not a string")
 	}
 	return s
 }
@@ -149,7 +166,7 @@ type mapPinata struct {
 	contents map[string]interface{}
 }
 
-func (p *mapPinata) PinataAtPath(pathStart string, path ...string) Pinata {
+func (p *mapPinata) pinataAtPath(method, pathStart string, path ...string) Pinata {
 	if p.err != nil {
 		return nil
 	}
@@ -160,25 +177,32 @@ func (p *mapPinata) PinataAtPath(pathStart string, path ...string) Pinata {
 			tmp := currentPinata.PinataAtPath(rest[0])
 			rest = rest[1:len(rest)]
 			if currentPinata.Error() != nil {
-				goto Fail
+				sofar := path[:len(path)-len(rest)]
+				msg := fmt.Sprintf(`path ("%s", "%s") not found`, pathStart, strings.Join(sofar, `", "`))
+				p.err = p.pathErrorf(method, pathStart, path, msg)
+				return nil
 			}
 			currentPinata = tmp
 		}
 		return currentPinata
 	}
-Fail:
-	p.pathFail("PinataAtPath", pathStart, path)
+	p.err = p.pathErrorf(method, pathStart, path, fmt.Sprintf(`path ("%s") not found`, pathStart))
 	return nil
 }
 
+func (p *mapPinata) PinataAtPath(pathStart string, path ...string) Pinata {
+	return p.pinataAtPath("PinataAtPath", pathStart, path...)
+}
+
 func (p *mapPinata) StringAtPath(pathStart string, path ...string) string {
-	pinata := p.PinataAtPath(pathStart, path...)
+	const method = "StringAtPath"
+	pinata := p.pinataAtPath(method, pathStart, path...)
 	if p.err != nil {
 		return ""
 	}
 	s := pinata.String()
 	if pinata.Error() != nil {
-		p.StringAtPath(pathStart, path...)
+		p.err = p.pathErrorf(method, pathStart, path, "not a string")
 	}
 	return s
 }

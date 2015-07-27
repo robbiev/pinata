@@ -86,3 +86,30 @@ func TestMapPinataDontPropagateErrorToParent(t *testing.T) {
 		t.Error()
 	}
 }
+
+func TestSomething(t *testing.T) {
+	m := make(map[string]interface{})
+	m2 := make(map[string]interface{})
+	m["one"] = m2
+	m2["two"] = "three"
+	p := New(m)
+	_ = p.PinataAtPath("one", "three")
+	if p.Error() == nil {
+		t.Error()
+	}
+	p.ClearError()
+	_ = p.StringAtPath("one", "three")
+	if p.Error() == nil {
+		t.Error()
+	}
+	p.ClearError()
+	_ = p.PinataAtPath("one", "two", "three")
+	if p.Error() == nil {
+		t.Error()
+	}
+	p.ClearError()
+	_ = p.PinataAtPath("foo", "bar", "hello")
+	if p.Error() == nil {
+		t.Error()
+	}
+}

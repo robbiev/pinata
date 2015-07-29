@@ -53,6 +53,7 @@ func TestMapPinata(t *testing.T) {
 	m2["two"] = "three"
 	p := New(m)
 	if "three" != p.StringAtPath("one", "two") {
+		fmt.Println(p.Error())
 		t.Error()
 	}
 }
@@ -96,20 +97,28 @@ func TestSomething(t *testing.T) {
 	_ = p.PinataAtPath("one", "three")
 	if p.Error() == nil {
 		t.Error()
+	} else {
+		fmt.Println(p.Error())
 	}
 	p.ClearError()
 	_ = p.StringAtPath("one", "three")
 	if p.Error() == nil {
 		t.Error()
+	} else {
+		fmt.Println(p.Error())
 	}
 	p.ClearError()
 	_ = p.PinataAtPath("one", "two", "three")
 	if p.Error() == nil {
 		t.Error()
+	} else {
+		fmt.Println(p.Error())
 	}
 	p.ClearError()
 	_ = p.PinataAtPath("foo", "bar", "hello")
 	if p.Error() == nil {
 		t.Error()
+	} else {
+		fmt.Println(p.Error())
 	}
 }

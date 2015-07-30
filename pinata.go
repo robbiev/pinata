@@ -37,10 +37,9 @@ var _ = error(PinataError{})
 type ErrorReason string
 
 const (
-	ErrorReasonUnknown         ErrorReason = "unknown"
-	ErrorReasonIncompatbleType             = "incompatible type"
-	ErrorReasonNotFound                    = "not found"
-	ErrorReasonInvalidInput                = "invalid input"
+	ErrorReasonIncompatibleType ErrorReason = "incompatible type"
+	ErrorReasonNotFound                     = "not found"
+	ErrorReasonInvalidInput                 = "invalid input"
 )
 
 type PinataError struct {
@@ -62,7 +61,7 @@ func (p PinataError) Error() string {
 		}
 		input = fmt.Sprintf(buf.String(), p.Input...)
 	}
-	return fmt.Sprintf("pinata: %s(%s): %s - %s", p.Method, input, p.Reason, p.Advice)
+	return fmt.Sprintf("pinata: %s(%s) - %s (%s)", p.Method, input, p.Reason, p.Advice)
 }
 
 type basePinata struct {
@@ -83,7 +82,7 @@ func (p *basePinata) String() string {
 	}
 	p.err = &PinataError{
 		Method: "String",
-		Reason: ErrorReasonIncompatbleType,
+		Reason: ErrorReasonIncompatibleType,
 		Input:  nil,
 		Advice: "call this method on a string pinata",
 	}
@@ -120,7 +119,7 @@ func (p *basePinata) indexUnsupported(method string, index int) {
 	}
 	p.err = &PinataError{
 		Method: method,
-		Reason: ErrorReasonIncompatbleType,
+		Reason: ErrorReasonIncompatibleType,
 		Input:  []interface{}{index},
 		Advice: "call this method on a slice pinata",
 	}
@@ -145,7 +144,7 @@ func (p *basePinata) pathUnsupported(method string, path []string) {
 	}
 	p.err = &PinataError{
 		Method: method,
-		Reason: ErrorReasonIncompatbleType,
+		Reason: ErrorReasonIncompatibleType,
 		Input:  toInterfaceSlice(path),
 		Advice: "call this method on a map pinata",
 	}
@@ -199,7 +198,7 @@ func (p *slicePinata) StringAtIndex(index int) string {
 	if pinata.Error() != nil {
 		p.err = &PinataError{
 			Method: method,
-			Reason: ErrorReasonIncompatbleType,
+			Reason: ErrorReasonIncompatibleType,
 			Input:  []interface{}{index},
 			Advice: "not a string, try another type",
 		}
@@ -239,9 +238,9 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 			} else {
 				p.err = &PinataError{
 					Method: method,
-					Reason: ErrorReasonIncompatbleType,
+					Reason: ErrorReasonIncompatibleType,
 					Input:  toInterfaceSlice(path),
-					Advice: fmt.Sprintf(`path ("%s") does not hold a pinata`, strings.Join(path[:i+1], `", "`)),
+					Advice: fmt.Sprintf(`path "%s" does not hold a pinata`, strings.Join(path[:i+1], `", "`)),
 				}
 				return nil
 			}
@@ -250,7 +249,7 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 				Method: method,
 				Reason: ErrorReasonNotFound,
 				Input:  toInterfaceSlice(path),
-				Advice: fmt.Sprintf(`path ("%s") does not exist`, strings.Join(path[:i+1], `", "`)),
+				Advice: fmt.Sprintf(`path "%s" does not exist`, strings.Join(path[:i+1], `", "`)),
 			}
 			return nil
 		}
@@ -264,7 +263,7 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 		Method: method,
 		Reason: ErrorReasonNotFound,
 		Input:  toInterfaceSlice(path),
-		Advice: fmt.Sprintf(`path ("%s") does not exist`, strings.Join(path, `", "`)),
+		Advice: fmt.Sprintf(`path "%s" does not exist`, strings.Join(path, `", "`)),
 	}
 	return nil
 }
@@ -283,7 +282,7 @@ func (p *mapPinata) StringAtPath(path ...string) string {
 	if pinata.Error() != nil {
 		p.err = &PinataError{
 			Method: method,
-			Reason: ErrorReasonIncompatbleType,
+			Reason: ErrorReasonIncompatibleType,
 			Input:  toInterfaceSlice(path),
 			Advice: "not a string, try another type",
 		}

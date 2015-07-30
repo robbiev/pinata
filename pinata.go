@@ -34,14 +34,19 @@ func New(contents interface{}) Pinata {
 
 var _ = error(PinataError{})
 
+// ErrorReason describes the reason for returning a PinataError.
 type ErrorReason string
 
 const (
+	// ErrorReasonIncompatibleType indicates the contents of the Pinata is not compatible with the invoked method.
 	ErrorReasonIncompatibleType ErrorReason = "incompatible type"
-	ErrorReasonNotFound                     = "not found"
-	ErrorReasonInvalidInput                 = "invalid input"
+	// ErrorReasonNotFound indicates the input has not been found in the Pinata.
+	ErrorReasonNotFound = "not found"
+	// ErrorReasonInvalidInput indicates the input is not in the expected range or format.
+	ErrorReasonInvalidInput = "invalid input"
 )
 
+// PinataError is set on the Pinata if something goes wrong.
 type PinataError struct {
 	Reason ErrorReason
 	Method string

@@ -5,6 +5,7 @@ package pinata
 import (
 	"bytes"
 	"fmt"
+	"strings"
 )
 
 // Pinata holds a value and offers methods for extracting data from it.
@@ -240,7 +241,7 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 					Method: method,
 					Reason: ErrorReasonIncompatbleType,
 					Input:  toInterfaceSlice(path),
-					Advice: fmt.Sprintf(`path "%#v" does not hold a pinata`, path[:i+1]),
+					Advice: fmt.Sprintf(`path ("%s") does not hold a pinata`, strings.Join(path[:i+1], `", "`)),
 				}
 				return nil
 			}
@@ -249,7 +250,7 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 				Method: method,
 				Reason: ErrorReasonNotFound,
 				Input:  toInterfaceSlice(path),
-				Advice: fmt.Sprintf(`path "%#v" does not exist`, path[:i+1]),
+				Advice: fmt.Sprintf(`path ("%s") does not exist`, strings.Join(path[:i+1], `", "`)),
 			}
 			return nil
 		}
@@ -263,7 +264,7 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 		Method: method,
 		Reason: ErrorReasonNotFound,
 		Input:  toInterfaceSlice(path),
-		Advice: fmt.Sprintf(`path "%#v" does not exist`, path),
+		Advice: fmt.Sprintf(`path ("%s") does not exist`, strings.Join(path, `", "`)),
 	}
 	return nil
 }

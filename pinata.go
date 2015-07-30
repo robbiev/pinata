@@ -318,14 +318,3 @@ func toInterfaceSlice(c []string) []interface{} {
 	}
 	return ifaces
 }
-
-func toSlice(first string, rest []string) []interface{} {
-	slice := make([]interface{}, len(rest)+1)
-	i := 0
-	slice[i] = first
-	for _, v := range rest {
-		i++
-		slice[i] = v
-	}
-	return slice
-}

@@ -59,9 +59,9 @@ func (p PinataError) Error() string {
 	if len(p.Input) > 0 {
 		var buf bytes.Buffer
 		for i := range p.Input {
-			buf.WriteString("%#v")
+			_, _ = buf.WriteString("%#v")
 			if i < len(p.Input)-1 {
-				buf.WriteString(", ")
+				_, _ = buf.WriteString(", ")
 			}
 		}
 		input = fmt.Sprintf(buf.String(), p.Input...)

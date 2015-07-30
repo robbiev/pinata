@@ -251,7 +251,7 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 					Method: method,
 					Reason: ErrorReasonIncompatibleType,
 					Input:  toInterfaceSlice(path),
-					Advice: fmt.Sprintf(`path "%s" does not hold a pinata`, strings.Join(path[:i+1], `", "`)),
+					Advice: fmt.Sprintf(`"%s" does not hold a pinata`, strings.Join(path[:i+1], `", "`)),
 				}
 				return nil
 			}
@@ -260,7 +260,7 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 				Method: method,
 				Reason: ErrorReasonNotFound,
 				Input:  toInterfaceSlice(path),
-				Advice: fmt.Sprintf(`path "%s" does not exist`, strings.Join(path[:i+1], `", "`)),
+				Advice: fmt.Sprintf(`"%s" does not exist`, strings.Join(path[:i+1], `", "`)),
 			}
 			return nil
 		}
@@ -274,7 +274,7 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 		Method: method,
 		Reason: ErrorReasonNotFound,
 		Input:  toInterfaceSlice(path),
-		Advice: fmt.Sprintf(`path "%s" does not exist`, strings.Join(path, `", "`)),
+		Advice: fmt.Sprintf(`"%s" does not exist`, strings.Join(path, `", "`)),
 	}
 	return nil
 }

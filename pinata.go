@@ -240,12 +240,12 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 		return nil
 	}
 
-	value := p.contents
+	contents := p.contents
 	for i := 0; i < len(path)-1; i++ {
 		current := path[i]
-		if v, ok := value[current]; ok {
+		if v, ok := contents[current]; ok {
 			if v, ok := v.(map[string]interface{}); ok {
-				value = v
+				contents = v
 			} else {
 				p.err = &PinataError{
 					Method: method,
@@ -266,7 +266,7 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 		}
 	}
 
-	if v, ok := value[path[len(path)-1]]; ok {
+	if v, ok := contents[path[len(path)-1]]; ok {
 		return New(v)
 	}
 

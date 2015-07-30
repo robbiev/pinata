@@ -90,33 +90,43 @@ func (p *basePinata) String() string {
 }
 
 func (p *basePinata) PinataAtIndex(index int) Pinata {
+	if p.err != nil {
+		return nil
+	}
 	p.indexUnsupported("PinataAtIndex", index)
 	return nil
 }
 
 func (p *basePinata) PinataAtPath(path ...string) Pinata {
+	if p.err != nil {
+		return nil
+	}
 	p.pathUnsupported("PinataAtPath", path)
 	return nil
 }
 
 func (p *basePinata) StringAtPath(path ...string) string {
+	if p.err != nil {
+		return ""
+	}
 	p.pathUnsupported("StringAtPath", path)
 	return ""
 }
 
 func (p *basePinata) StringAtIndex(index int) string {
+	if p.err != nil {
+		return ""
+	}
 	p.indexUnsupported("StringAtIndex", index)
 	return ""
 }
 
 func (p *basePinata) Contents() interface{} {
-	return nil
+	return nil // should always override this method
 }
 
+// this method assumes p.err != nil
 func (p *basePinata) indexUnsupported(method string, index int) {
-	if p.err != nil {
-		return
-	}
 	p.err = &PinataError{
 		Method: method,
 		Reason: ErrorReasonIncompatibleType,
@@ -125,6 +135,7 @@ func (p *basePinata) indexUnsupported(method string, index int) {
 	}
 }
 
+// this method assumes p.err != nil
 func (p *basePinata) setIndexOutOfRange(method string, index int, contents []interface{}) bool {
 	if index < 0 || index >= len(contents) {
 		p.err = &PinataError{
@@ -138,10 +149,8 @@ func (p *basePinata) setIndexOutOfRange(method string, index int, contents []int
 	return false
 }
 
+// this method assumes p.err != nil
 func (p *basePinata) pathUnsupported(method string, path []string) {
-	if p.err != nil {
-		return
-	}
 	p.err = &PinataError{
 		Method: method,
 		Reason: ErrorReasonIncompatibleType,
@@ -174,10 +183,8 @@ type slicePinata struct {
 	contents []interface{}
 }
 
+// this method assumes p.err != nil
 func (p *slicePinata) pinataAtIndex(method string, index int) Pinata {
-	if p.err != nil {
-		return nil
-	}
 	if p.setIndexOutOfRange(method, index, p.contents) {
 		return nil
 	}
@@ -185,10 +192,16 @@ func (p *slicePinata) pinataAtIndex(method string, index int) Pinata {
 }
 
 func (p *slicePinata) PinataAtIndex(index int) Pinata {
+	if p.err != nil {
+		return nil
+	}
 	return p.pinataAtIndex("PinataAtIndex", index)
 }
 
 func (p *slicePinata) StringAtIndex(index int) string {
+	if p.err != nil {
+		return ""
+	}
 	const method = "StringAtIndex"
 	pinata := p.pinataAtIndex(method, index)
 	if p.err != nil {
@@ -215,10 +228,8 @@ type mapPinata struct {
 	contents map[string]interface{}
 }
 
+// this method assumes p.err != nil
 func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
-	if p.err != nil {
-		return nil
-	}
 	if len(path) == 0 {
 		p.err = &PinataError{
 			Method: method,
@@ -269,10 +280,16 @@ func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 }
 
 func (p *mapPinata) PinataAtPath(path ...string) Pinata {
+	if p.err != nil {
+		return nil
+	}
 	return p.pinataAtPath("PinataAtPath", path...)
 }
 
 func (p *mapPinata) StringAtPath(path ...string) string {
+	if p.err != nil {
+		return ""
+	}
 	const method = "StringAtPath"
 	pinata := p.pinataAtPath(method, path...)
 	if p.err != nil {

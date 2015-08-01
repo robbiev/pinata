@@ -10,7 +10,7 @@ import (
 
 const str = "test string"
 
-func ExamplePinata() {
+func ExampleStick() {
 	const message = `
 	{
 		"Name": "Kevin",

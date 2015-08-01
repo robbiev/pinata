@@ -67,11 +67,11 @@ func (ec ErrorContext) MethodArgs() []interface{} {
 }
 
 // Next gets additional context linked to this one.
-func (ec ErrorContext) Next() ErrorContext {
+func (ec ErrorContext) Next() (ErrorContext, bool) {
 	if ec.next != nil {
-		return *ec.next
+		return *ec.next, true
 	}
-	return ErrorContext{}
+	return ErrorContext{}, false
 }
 
 // Pinata holds the data.
@@ -192,11 +192,11 @@ func (p Error) Reason() ErrorReason {
 }
 
 // Context returns more information about the circumstances of the error.
-func (p Error) Context() ErrorContext {
+func (p Error) Context() (ErrorContext, bool) {
 	if p.context != nil {
-		return *p.context
+		return *p.context, true
 	}
-	return ErrorContext{}
+	return ErrorContext{}, false
 }
 
 // Advice contains a human readable hint detailing how to remedy this error.

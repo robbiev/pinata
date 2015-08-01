@@ -11,7 +11,8 @@ import (
 const str = "test string"
 
 func ExamplePinata() {
-	const message = `{
+	const message = `
+	{
 		"Name": "Kevin",
 		"Phone": ["+44 20 7123 4567", "+44 20 4567 7123"],
 		"Address": {
@@ -38,9 +39,9 @@ func ExamplePinata() {
 
 	// no error handling here
 	kevin := gopher{
-		Name:  stick.StringAtPath(pinata, "Name"),
-		Phone: stick.StringAtIndex(stick.PinataAtPath(pinata, "Phone"), 0),
-		City:  stick.StringAtPath(pinata, "Address", "City"),
+		Name:  stick.PathString(pinata, "Name"),
+		Phone: stick.IndexString(stick.PathPinata(pinata, "Phone"), 0),
+		City:  stick.PathString(pinata, "Address", "City"),
 	}
 
 	if err := stick.Error(); err != nil {
@@ -59,7 +60,8 @@ func ExamplePinata() {
 }
 
 func TestPinata(t *testing.T) {
-	const message = `{
+	const message = `
+	{
 		"Name": "Kevin",
 		"Phone": ["+44 20 7123 4567", "+44 20 4567 7123"],
 		"Address": {
@@ -78,17 +80,17 @@ func TestPinata(t *testing.T) {
 
 	stick, pinata := pinata.New(m)
 
-	stick.StringAtPath(pinata, "Phone")
+	stick.PathString(pinata, "Phone")
 	if err := stick.Error(); err != nil {
 		fmt.Println(err)
 		stick.ClearError()
 	}
-	stick.StringAtIndex(stick.PinataAtPath(pinata, "Phone"), 3)
+	stick.IndexString(stick.PathPinata(pinata, "Phone"), 3)
 	if err := stick.Error(); err != nil {
 		fmt.Println(err)
 		stick.ClearError()
 	}
-	stick.StringAtPath(pinata, "Address", "City", "Town")
+	stick.PathString(pinata, "Address", "City", "Town")
 	if err := stick.Error(); err != nil {
 		fmt.Println(err)
 		stick.ClearError()

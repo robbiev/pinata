@@ -12,11 +12,11 @@ import (
 type Stick interface {
 	Error() error
 	ClearError()
-	StringAtPath(Pinata, ...string) string
+	PathString(Pinata, ...string) string
 	String(Pinata) string
-	StringAtIndex(Pinata, int) string
-	PinataAtPath(Pinata, ...string) Pinata
-	PinataAtIndex(Pinata, int) Pinata
+	IndexString(Pinata, int) string
+	PathPinata(Pinata, ...string) Pinata
+	IndexPinata(Pinata, int) Pinata
 }
 
 type ErrorContext struct {
@@ -109,10 +109,10 @@ func NewStick() Stick {
 
 // New creates a new Stick. Instances returned are not thread safe.
 func NewPinata(contents interface{}) Pinata {
-	return NewPinataWithContext(contents, nil)
+	return newPinataWithContext(contents, nil)
 }
 
-func NewPinataWithContext(contents interface{}, context *ErrorContext) Pinata {
+func newPinataWithContext(contents interface{}, context *ErrorContext) Pinata {
 	switch t := contents.(type) {
 	case map[string]interface{}:
 		return Pinata{contents: &mapPinata{value: t}, context: context}
@@ -270,34 +270,34 @@ func (s *stick) String(p Pinata) string {
 }
 
 // this method assumes s.err != nil
-func (s *stick) pinataAtIndex(p Pinata, method string, index int) Pinata {
+func (s *stick) indexPinata(p Pinata, method string, index int) Pinata {
 	if slice, ok := p.Slice(); ok {
 		if s.setIndexOutOfRange(p.context, method, index, slice) {
 			return Pinata{}
 		}
-		return NewPinataWithContext(slice[index], &ErrorContext{
+		return newPinataWithContext(slice[index], &ErrorContext{
 			method:      method,
 			methodInput: []interface{}{index},
 			next:        p.context,
 		})
 	}
-	s.indexUnsupported(p.context, "pinataAtIndex", index)
+	s.indexUnsupported(p.context, method, index)
 	return Pinata{}
 }
 
-func (s *stick) PinataAtIndex(p Pinata, index int) Pinata {
+func (s *stick) IndexPinata(p Pinata, index int) Pinata {
 	if s.err != nil {
 		return Pinata{}
 	}
-	return s.pinataAtIndex(p, "PinataAtIndex", index)
+	return s.indexPinata(p, "IndexPinata", index)
 }
 
-func (s *stick) StringAtIndex(p Pinata, index int) string {
+func (s *stick) IndexString(p Pinata, index int) string {
 	if s.err != nil {
 		return ""
 	}
-	const method = "StringAtIndex"
-	pinata := s.pinataAtIndex(p, method, index)
+	const method = "IndexString"
+	pinata := s.indexPinata(p, method, index)
 	if s.err != nil {
 		return ""
 	}
@@ -318,7 +318,7 @@ func (s *stick) StringAtIndex(p Pinata, index int) string {
 }
 
 // this method assumes s.err != nil
-func (s *stick) pinataAtPath(p Pinata, method string, path ...string) Pinata {
+func (s *stick) pathPinata(p Pinata, method string, path ...string) Pinata {
 	contents, ok := p.Map()
 
 	if !ok {
@@ -371,7 +371,7 @@ func (s *stick) pinataAtPath(p Pinata, method string, path ...string) Pinata {
 	}
 
 	if v, ok := contents[path[len(path)-1]]; ok {
-		return NewPinataWithContext(v, &ErrorContext{
+		return newPinataWithContext(v, &ErrorContext{
 			method:      method,
 			methodInput: toInterfaceSlice(path),
 			next:        p.context,
@@ -390,19 +390,19 @@ func (s *stick) pinataAtPath(p Pinata, method string, path ...string) Pinata {
 	return Pinata{}
 }
 
-func (s *stick) PinataAtPath(p Pinata, path ...string) Pinata {
+func (s *stick) PathPinata(p Pinata, path ...string) Pinata {
 	if s.err != nil {
 		return Pinata{}
 	}
-	return s.pinataAtPath(p, "PinataAtPath", path...)
+	return s.pathPinata(p, "PathPinata", path...)
 }
 
-func (s *stick) StringAtPath(p Pinata, path ...string) string {
+func (s *stick) PathString(p Pinata, path ...string) string {
 	if s.err != nil {
 		return ""
 	}
-	const method = "StringAtPath"
-	pinata := s.pinataAtPath(p, method, path...)
+	const method = "PathString"
+	pinata := s.pathPinata(p, method, path...)
 	if s.err != nil {
 		return ""
 	}

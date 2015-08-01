@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-// Stick offers methods for extracting data from a Pinata.
+// Stick offers methods of hitting the Pinata and extracting its goodness.
 type Stick interface {
 	// Error returns the first error encountered or nil if all operations so far
 	// were successful.
@@ -53,12 +53,12 @@ type ErrorContext struct {
 	next        *ErrorContext
 }
 
-// Method returns the name of the method that caused the error.
+// MethodName returns the name of the method that caused the error.
 func (ec ErrorContext) MethodName() string {
 	return ec.method
 }
 
-// MethodInput returns the input parameters of the method that caused the error.
+// MethodArgs returns the input parameters of the method that caused the error.
 func (ec ErrorContext) MethodArgs() []interface{} {
 	return ec.methodInput
 }
@@ -187,6 +187,7 @@ func (p Error) Advice() string {
 	return p.advice
 }
 
+// Error returns a summary of the problem.
 func (p Error) Error() string {
 	var summaries []string
 	current := p.context

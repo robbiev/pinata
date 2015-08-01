@@ -7,6 +7,8 @@
 // series of operations instead of at each operation seperately. Because of
 // this "late" error handling design special care is taken to return good
 // errors so you can still find out where things went wrong.
+//
+// This API is not thread safe.
 package pinata
 
 import (
@@ -47,6 +49,7 @@ type Stick interface {
 	IndexPinata(Pinata, int) Pinata
 }
 
+// ErrorContext contains information about the circumstances of an error.
 type ErrorContext struct {
 	method      string
 	methodInput []interface{}
@@ -63,23 +66,33 @@ func (ec ErrorContext) MethodArgs() []interface{} {
 	return ec.methodInput
 }
 
+// Next gets additional context linked to this one.
 func (ec ErrorContext) Next() ErrorContext {
-	return *ec.next
+	if ec.next != nil {
+		return *ec.next
+	}
+	return ErrorContext{}
 }
 
+// Pinata holds the data.
 type Pinata struct {
 	context  *ErrorContext
 	contents contents
 }
 
+// Value returns the raw Pinata value.
 func (p Pinata) Value() interface{} {
 	return p.contents.Value()
 }
 
+// Map returns the Pinata value as a map if it is one (the bool indicates
+// success).
 func (p Pinata) Map() (map[string]interface{}, bool) {
 	return p.contents.Map()
 }
 
+// Slice returns the Pinata value as a slice if it is one (the bool indicates
+// success).
 func (p Pinata) Slice() ([]interface{}, bool) {
 	return p.contents.Slice()
 }
@@ -131,11 +144,12 @@ func New(contents interface{}) (Stick, Pinata) {
 	return NewStick(), NewPinata(contents)
 }
 
+// NewStick returns a new Stick to hit a Pinata with.
 func NewStick() Stick {
 	return &stick{}
 }
 
-// New creates a new Stick. Instances returned are not thread safe.
+// NewPinata creates a new Pinata holding the specified value.
 func NewPinata(contents interface{}) Pinata {
 	return newPinataWithContext(contents, nil)
 }
@@ -179,7 +193,10 @@ func (p Error) Reason() ErrorReason {
 
 // Context returns more information about the circumstances of the error.
 func (p Error) Context() ErrorContext {
-	return *p.context
+	if p.context != nil {
+		return *p.context
+	}
+	return ErrorContext{}
 }
 
 // Advice contains a human readable hint detailing how to remedy this error.

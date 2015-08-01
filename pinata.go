@@ -181,7 +181,7 @@ func (p PinataError) Error() string {
 		}
 		current = current.next
 	}
-	return fmt.Sprintf("pinata: %s (%s): \n\t%v", p.Reason(), p.Advice(), strings.Join(summaries, " <= "))
+	return fmt.Sprintf("pinata: %s (%s): \n\t%v", p.Reason(), p.Advice(), strings.Join(summaries, " :: "))
 }
 
 type stick struct {

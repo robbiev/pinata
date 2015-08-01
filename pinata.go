@@ -59,17 +59,17 @@ func (p PinataError) Reason() ErrorReason {
 	return p.reason
 }
 
-// Method returns the method that causes the error.
+// Method returns the name of the method that caused the error.
 func (p PinataError) Method() string {
 	return p.method
 }
 
-// MethodInput returns the input parameters of the method that causes the error.
+// MethodInput returns the input parameters of the method that caused the error.
 func (p PinataError) MethodInput() []interface{} {
 	return p.input
 }
 
-// Advice contains a human readable hint on how to remedy this error.
+// Advice contains a human readable hint detailing how to remedy this error.
 func (p PinataError) Advice() string {
 	return p.advice
 }

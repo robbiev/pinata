@@ -54,12 +54,12 @@ type ErrorContext struct {
 }
 
 // Method returns the name of the method that caused the error.
-func (ec ErrorContext) Method() string {
+func (ec ErrorContext) MethodName() string {
 	return ec.method
 }
 
 // MethodInput returns the input parameters of the method that caused the error.
-func (ec ErrorContext) MethodInput() []interface{} {
+func (ec ErrorContext) MethodArgs() []interface{} {
 	return ec.methodInput
 }
 
@@ -191,11 +191,11 @@ func (p Error) Error() string {
 	var summaries []string
 	current := p.context
 	for current != nil {
-		var methodInput = current.MethodInput()
+		var methodInput = current.MethodArgs()
 		var summary string
 		if len(methodInput) > 0 {
 			var buf bytes.Buffer
-			_, _ = buf.WriteString(current.Method())
+			_, _ = buf.WriteString(current.MethodName())
 			_ = buf.WriteByte('(')
 			for i := range methodInput {
 				_, _ = buf.WriteString("%#v")

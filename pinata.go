@@ -197,11 +197,11 @@ func (s *stick) Error() error {
 }
 
 // this method assumes s.err != nil
-func (s *stick) stringUnsupported(errCtx *ErrorContext, advice string) string {
+func (s *stick) stringUnsupported(errCtx *ErrorContext, method string, input []interface{}, advice string) string {
 	s.err = &PinataError{
 		context: &ErrorContext{
-			method:      "String",
-			methodInput: nil,
+			method:      method,
+			methodInput: input,
 			next:        errCtx,
 		},
 		reason: ErrorReasonIncompatibleType,
@@ -224,23 +224,6 @@ func (s *stick) indexUnsupported(errCtx *ErrorContext, method string, index int)
 }
 
 // this method assumes s.err != nil
-func (s *stick) setIndexOutOfRange(errCtx *ErrorContext, method string, index int, contents []interface{}) bool {
-	if index < 0 || index >= len(contents) {
-		s.err = &PinataError{
-			context: &ErrorContext{
-				method:      method,
-				methodInput: []interface{}{index},
-				next:        errCtx,
-			},
-			reason: ErrorReasonInvalidInput,
-			advice: fmt.Sprintf("specify an index from 0 to %d", len(contents)-1),
-		}
-		return true
-	}
-	return false
-}
-
-// this method assumes s.err != nil
 func (s *stick) pathUnsupported(errCtx *ErrorContext, method string, path []string) {
 	s.err = &PinataError{
 		context: &ErrorContext{
@@ -253,26 +236,40 @@ func (s *stick) pathUnsupported(errCtx *ErrorContext, method string, path []stri
 	}
 }
 
-func (s *stick) String(p Pinata) string {
-	if s.err != nil {
-		return ""
-	}
+// this method assumes s.err != nil
+func (s *stick) sstring(p Pinata, method string, input []interface{}) string {
 	if _, ok := p.Map(); ok {
-		return s.stringUnsupported(p.context, "this is a map")
+		return s.stringUnsupported(p.context, method, input, "this is a map")
 	}
 	if _, ok := p.Slice(); ok {
-		return s.stringUnsupported(p.context, "this is a slice")
+		return s.stringUnsupported(p.context, method, input, "this is a slice")
 	}
 	if v, ok := p.Value().(string); ok {
 		return v
 	}
-	return s.stringUnsupported(p.context, "this is not a string")
+	return s.stringUnsupported(p.context, method, input, "this is not a string")
+}
+
+func (s *stick) String(p Pinata) string {
+	if s.err != nil {
+		return ""
+	}
+	return s.sstring(p, "String", nil)
 }
 
 // this method assumes s.err != nil
 func (s *stick) indexPinata(p Pinata, method string, index int) Pinata {
 	if slice, ok := p.Slice(); ok {
-		if s.setIndexOutOfRange(p.context, method, index, slice) {
+		if index < 0 || index >= len(slice) {
+			s.err = &PinataError{
+				context: &ErrorContext{
+					method:      method,
+					methodInput: []interface{}{index},
+					next:        p.context,
+				},
+				reason: ErrorReasonInvalidInput,
+				advice: fmt.Sprintf("specify an index from 0 to %d", len(slice)-1),
+			}
 			return Pinata{}
 		}
 		return newPinataWithContext(slice[index], &ErrorContext{
@@ -301,20 +298,8 @@ func (s *stick) IndexString(p Pinata, index int) string {
 	if s.err != nil {
 		return ""
 	}
-	str := s.String(pinata)
-	if s.err != nil {
-		s.err = &PinataError{
-			context: &ErrorContext{
-				method:      method,
-				methodInput: []interface{}{index},
-				next:        p.context,
-			},
-			reason: ErrorReasonIncompatibleType,
-			advice: "not a string, try another type",
-		}
-		return ""
-	}
-	return str
+	pinata.context = p.context
+	return s.sstring(pinata, method, []interface{}{index})
 }
 
 // this method assumes s.err != nil
@@ -406,19 +391,8 @@ func (s *stick) PathString(p Pinata, path ...string) string {
 	if s.err != nil {
 		return ""
 	}
-	str := s.String(pinata)
-	if s.err != nil {
-		s.err = &PinataError{
-			context: &ErrorContext{
-				method:      method,
-				methodInput: toInterfaceSlice(path),
-				next:        p.context,
-			},
-			reason: ErrorReasonIncompatibleType,
-			advice: "not a string, try another type",
-		}
-	}
-	return str
+	pinata.context = p.context
+	return s.sstring(pinata, method, toInterfaceSlice(path))
 }
 
 func toInterfaceSlice(c []string) []interface{} {

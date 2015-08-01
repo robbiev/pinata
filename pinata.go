@@ -179,7 +179,7 @@ const (
 	ErrorReasonInvalidInput = "invalid input"
 )
 
-// Error is set on the Pinata if something goes wrong.
+// Error is set on the Pinata when something goes wrong.
 type Error struct {
 	reason  ErrorReason
 	context *ErrorContext

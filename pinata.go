@@ -63,8 +63,8 @@ func (ec ErrorContext) MethodInput() []interface{} {
 	return ec.methodInput
 }
 
-func (ec ErrorContext) Next() *ErrorContext {
-	return ec.next
+func (ec ErrorContext) Next() ErrorContext {
+	return *ec.next
 }
 
 type Pinata struct {
@@ -151,9 +151,9 @@ func newPinataWithContext(contents interface{}, context *ErrorContext) Pinata {
 	}
 }
 
-var _ = error(PinataError{})
+var _ = error(Error{})
 
-// ErrorReason describes the reason for returning a PinataError.
+// ErrorReason describes the reason for returning an Error.
 type ErrorReason string
 
 const (
@@ -165,29 +165,29 @@ const (
 	ErrorReasonInvalidInput = "invalid input"
 )
 
-// PinataError is set on the Pinata if something goes wrong.
-type PinataError struct {
+// Error is set on the Pinata if something goes wrong.
+type Error struct {
 	reason  ErrorReason
 	context *ErrorContext
 	advice  string
 }
 
 // Reason indicates why the error occurred.
-func (p PinataError) Reason() ErrorReason {
+func (p Error) Reason() ErrorReason {
 	return p.reason
 }
 
 // Context returns more information about the circumstances of the error.
-func (p PinataError) Context() *ErrorContext {
-	return p.context
+func (p Error) Context() ErrorContext {
+	return *p.context
 }
 
 // Advice contains a human readable hint detailing how to remedy this error.
-func (p PinataError) Advice() string {
+func (p Error) Advice() string {
 	return p.advice
 }
 
-func (p PinataError) Error() string {
+func (p Error) Error() string {
 	var summaries []string
 	current := p.context
 	for current != nil {
@@ -226,7 +226,7 @@ func (s *stick) Error() error {
 
 // this method assumes s.err != nil
 func (s *stick) stringUnsupported(errCtx *ErrorContext, method string, input []interface{}, advice string) string {
-	s.err = &PinataError{
+	s.err = &Error{
 		context: &ErrorContext{
 			method:      method,
 			methodInput: input,
@@ -240,7 +240,7 @@ func (s *stick) stringUnsupported(errCtx *ErrorContext, method string, input []i
 
 // this method assumes s.err != nil
 func (s *stick) indexUnsupported(errCtx *ErrorContext, method string, index int) {
-	s.err = &PinataError{
+	s.err = &Error{
 		context: &ErrorContext{
 			method:      method,
 			methodInput: []interface{}{index},
@@ -253,7 +253,7 @@ func (s *stick) indexUnsupported(errCtx *ErrorContext, method string, index int)
 
 // this method assumes s.err != nil
 func (s *stick) pathUnsupported(errCtx *ErrorContext, method string, path []string) {
-	s.err = &PinataError{
+	s.err = &Error{
 		context: &ErrorContext{
 			method:      method,
 			methodInput: toInterfaceSlice(path),
@@ -289,7 +289,7 @@ func (s *stick) String(p Pinata) string {
 func (s *stick) internalIndexPinata(p Pinata, method string, index int) Pinata {
 	if slice, ok := p.Slice(); ok {
 		if index < 0 || index >= len(slice) {
-			s.err = &PinataError{
+			s.err = &Error{
 				context: &ErrorContext{
 					method:      method,
 					methodInput: []interface{}{index},
@@ -340,7 +340,7 @@ func (s *stick) internalPathPinata(p Pinata, method string, path ...string) Pina
 	}
 
 	if len(path) == 0 {
-		s.err = &PinataError{
+		s.err = &Error{
 			context: &ErrorContext{
 				method:      method,
 				methodInput: toInterfaceSlice(path),
@@ -358,7 +358,7 @@ func (s *stick) internalPathPinata(p Pinata, method string, path ...string) Pina
 			if v, ok := v.(map[string]interface{}); ok {
 				contents = v
 			} else {
-				s.err = &PinataError{
+				s.err = &Error{
 					context: &ErrorContext{
 						method:      method,
 						methodInput: toInterfaceSlice(path),
@@ -370,7 +370,7 @@ func (s *stick) internalPathPinata(p Pinata, method string, path ...string) Pina
 				return Pinata{}
 			}
 		} else {
-			s.err = &PinataError{
+			s.err = &Error{
 				context: &ErrorContext{
 					method:      method,
 					methodInput: toInterfaceSlice(path),
@@ -391,7 +391,7 @@ func (s *stick) internalPathPinata(p Pinata, method string, path ...string) Pina
 		})
 	}
 
-	s.err = &PinataError{
+	s.err = &Error{
 		context: &ErrorContext{
 			method:      method,
 			methodInput: toInterfaceSlice(path),

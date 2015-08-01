@@ -1,5 +1,12 @@
 // Package pinata is a utility to beat data out of interface{}, []interface{}
-// and map[string]interface{}.
+// and map[string]interface{}. It was origally designed for use with the
+// encoding/json package but can be generally useful.
+//
+// Unlike other packages most methods do not return an error type. They become
+// a no-op when the first error is found so the error can be checked after a
+// series of operations instead of at each operation seperately. Because of
+// this "late" error handling design special care is taken to return good
+// errors so you can still find out where things went wrong.
 package pinata
 
 import (
@@ -10,12 +17,33 @@ import (
 
 // Stick offers methods for extracting data from a Pinata.
 type Stick interface {
+	// Error returns the first error encountered or nil if all operations so far
+	// were successful.
 	Error() error
+
+	// ClearError clears the error. If there is no error the method has no effect.
 	ClearError()
+
+	// PathString gets the string value at the given path within the Pinata. The
+	// last element in the path must be a string, the rest must be a
+	// map[string]interface{}. The input Pinata must hold a
+	// map[string]interface{} as well.
 	PathString(Pinata, ...string) string
+
+	// String returns the Pinata as a string if it is one.
 	String(Pinata) string
+
+	// IndexString gets the string value at the given index within the Pinata.
+	// The input Pinata must hold a []interface{}.
 	IndexString(Pinata, int) string
+
+	// PathPinata gets the Pinata value at the given path within the Pinata. All
+	// elements in the path must be of type map[string]interface{}. The input
+	// Pinata must hold a map[string]interface{} as well.
 	PathPinata(Pinata, ...string) Pinata
+
+	// IndexString gets the Pinata value at the given index within the Pinata.
+	// The input Pinata must hold a []interface{}.
 	IndexPinata(Pinata, int) Pinata
 }
 

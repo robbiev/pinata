@@ -8,27 +8,109 @@ import (
 	"strings"
 )
 
-// Pinata holds a value and offers methods for extracting data from it.
-type Pinata interface {
-	Contents() interface{}
+// Stick offers methods for extracting data from a Pinata.
+type Stick interface {
 	Error() error
 	ClearError()
-	StringAtPath(...string) string
-	String() string
-	StringAtIndex(int) string
-	PinataAtPath(...string) Pinata
-	PinataAtIndex(int) Pinata
+	StringAtPath(Pinata, ...string) string
+	String(Pinata) string
+	StringAtIndex(Pinata, int) string
+	PinataAtPath(Pinata, ...string) Pinata
+	PinataAtIndex(Pinata, int) Pinata
 }
 
-// New creates a new Pinata. Instances returned are not thread safe.
-func New(contents interface{}) Pinata {
+type ErrorContext struct {
+	method      string
+	methodInput []interface{}
+}
+
+// Method returns the name of the method that caused the error.
+func (ec ErrorContext) Method() string {
+	return ec.method
+}
+
+// MethodInput returns the input parameters of the method that caused the error.
+func (ec ErrorContext) MethodInput() []interface{} {
+	return ec.methodInput
+}
+
+type Pinata struct {
+	context  *ErrorContext
+	contents contents
+}
+
+func (p Pinata) Value() interface{} {
+	return p.contents.Value()
+}
+
+func (p Pinata) Map() (map[string]interface{}, bool) {
+	return p.contents.Map()
+}
+
+func (p Pinata) Slice() ([]interface{}, bool) {
+	return p.contents.Slice()
+}
+
+type contents interface {
+	Value() interface{}
+	Map() (map[string]interface{}, bool)
+	Slice() ([]interface{}, bool)
+}
+
+type otherPinata struct {
+	value interface{}
+}
+
+func (p otherPinata) Value() interface{} {
+	return p.value
+}
+
+func (p otherPinata) Map() (map[string]interface{}, bool) {
+	return nil, false
+}
+
+func (p otherPinata) Slice() ([]interface{}, bool) {
+	return nil, false
+}
+
+var _ = contents(mapPinata{})
+
+type mapPinata struct {
+	otherPinata
+	value map[string]interface{}
+}
+
+func (p mapPinata) Map() (map[string]interface{}, bool) {
+	return p.value, true
+}
+
+type slicePinata struct {
+	otherPinata
+	value []interface{}
+}
+
+func (p slicePinata) Slice() ([]interface{}, bool) {
+	return p.value, true
+}
+
+// New is a starting point for a pinata celebration.
+func New(contents interface{}) (Stick, Pinata) {
+	return NewStick(), NewPinata(contents)
+}
+
+func NewStick() Stick {
+	return &stick{}
+}
+
+// New creates a new Stick. Instances returned are not thread safe.
+func NewPinata(contents interface{}) Pinata {
 	switch t := contents.(type) {
-	default:
-		return &otherPinata{contents: t}
 	case map[string]interface{}:
-		return &mapPinata{contents: t}
+		return Pinata{contents: &mapPinata{value: t}}
 	case []interface{}:
-		return &slicePinata{contents: t}
+		return Pinata{contents: &slicePinata{value: t}}
+	default:
+		return Pinata{contents: &otherPinata{value: t}}
 	}
 }
 
@@ -90,23 +172,21 @@ func (p PinataError) Error() string {
 	return fmt.Sprintf("pinata: %s(%s) - %s (%s)", p.Method(), input, p.Reason(), p.Advice())
 }
 
-type basePinata struct {
+type stick struct {
 	err error
 }
 
-func (p *basePinata) Error() error {
-	return p.err
+func (s *stick) ClearError() {
+	s.err = nil
 }
 
-func (p *basePinata) ClearError() {
-	p.err = nil
+func (s *stick) Error() error {
+	return s.err
 }
 
-func (p *basePinata) String() string {
-	if p.err != nil {
-		return ""
-	}
-	p.err = &PinataError{
+// this method assumes s.err != nil
+func (s *stick) stringUnsupported() string {
+	s.err = &PinataError{
 		method: "String",
 		reason: ErrorReasonIncompatibleType,
 		input:  nil,
@@ -115,45 +195,9 @@ func (p *basePinata) String() string {
 	return ""
 }
 
-func (p *basePinata) PinataAtIndex(index int) Pinata {
-	if p.err != nil {
-		return nil
-	}
-	p.indexUnsupported("PinataAtIndex", index)
-	return nil
-}
-
-func (p *basePinata) PinataAtPath(path ...string) Pinata {
-	if p.err != nil {
-		return nil
-	}
-	p.pathUnsupported("PinataAtPath", path)
-	return nil
-}
-
-func (p *basePinata) StringAtPath(path ...string) string {
-	if p.err != nil {
-		return ""
-	}
-	p.pathUnsupported("StringAtPath", path)
-	return ""
-}
-
-func (p *basePinata) StringAtIndex(index int) string {
-	if p.err != nil {
-		return ""
-	}
-	p.indexUnsupported("StringAtIndex", index)
-	return ""
-}
-
-func (p *basePinata) Contents() interface{} {
-	return nil // should always override this method
-}
-
-// this method assumes p.err != nil
-func (p *basePinata) indexUnsupported(method string, index int) {
-	p.err = &PinataError{
+// this method assumes s.err != nil
+func (s *stick) indexUnsupported(method string, index int) {
+	s.err = &PinataError{
 		method: method,
 		reason: ErrorReasonIncompatibleType,
 		input:  []interface{}{index},
@@ -161,10 +205,10 @@ func (p *basePinata) indexUnsupported(method string, index int) {
 	}
 }
 
-// this method assumes p.err != nil
-func (p *basePinata) setIndexOutOfRange(method string, index int, contents []interface{}) bool {
+// this method assumes s.err != nil
+func (s *stick) setIndexOutOfRange(method string, index int, contents []interface{}) bool {
 	if index < 0 || index >= len(contents) {
-		p.err = &PinataError{
+		s.err = &PinataError{
 			method: method,
 			reason: ErrorReasonInvalidInput,
 			input:  []interface{}{index},
@@ -175,9 +219,9 @@ func (p *basePinata) setIndexOutOfRange(method string, index int, contents []int
 	return false
 }
 
-// this method assumes p.err != nil
-func (p *basePinata) pathUnsupported(method string, path []string) {
-	p.err = &PinataError{
+// this method assumes s.err != nil
+func (s *stick) pathUnsupported(method string, path []string) {
+	s.err = &PinataError{
 		method: method,
 		reason: ErrorReasonIncompatibleType,
 		input:  toInterfaceSlice(path),
@@ -185,57 +229,53 @@ func (p *basePinata) pathUnsupported(method string, path []string) {
 	}
 }
 
-type otherPinata struct {
-	basePinata
-	contents interface{}
-}
-
-func (p *otherPinata) String() string {
-	if p.err != nil {
+func (s *stick) String(p Pinata) string {
+	if s.err != nil {
 		return ""
 	}
-	if v, ok := p.contents.(string); ok {
+	if _, ok := p.Map(); ok {
+		return s.stringUnsupported()
+	}
+	if _, ok := p.Slice(); ok {
+		return s.stringUnsupported()
+	}
+	if v, ok := p.Value().(string); ok {
 		return v
 	}
-	return p.basePinata.String()
+	return s.stringUnsupported()
 }
 
-func (p *otherPinata) Contents() interface{} {
-	return p.contents
-}
-
-type slicePinata struct {
-	basePinata
-	contents []interface{}
-}
-
-// this method assumes p.err != nil
-func (p *slicePinata) pinataAtIndex(method string, index int) Pinata {
-	if p.setIndexOutOfRange(method, index, p.contents) {
-		return nil
+// this method assumes s.err != nil
+func (s *stick) pinataAtIndex(p Pinata, method string, index int) Pinata {
+	if slice, ok := p.Slice(); ok {
+		if s.setIndexOutOfRange(method, index, slice) {
+			return Pinata{}
+		}
+		return NewPinata(slice[index])
 	}
-	return New(p.contents[index])
+	s.indexUnsupported("pinataAtIndex", index)
+	return Pinata{}
 }
 
-func (p *slicePinata) PinataAtIndex(index int) Pinata {
-	if p.err != nil {
-		return nil
+func (s *stick) PinataAtIndex(p Pinata, index int) Pinata {
+	if s.err != nil {
+		return Pinata{}
 	}
-	return p.pinataAtIndex("PinataAtIndex", index)
+	return s.pinataAtIndex(p, "PinataAtIndex", index)
 }
 
-func (p *slicePinata) StringAtIndex(index int) string {
-	if p.err != nil {
+func (s *stick) StringAtIndex(p Pinata, index int) string {
+	if s.err != nil {
 		return ""
 	}
 	const method = "StringAtIndex"
-	pinata := p.pinataAtIndex(method, index)
-	if p.err != nil {
+	pinata := s.pinataAtIndex(p, method, index)
+	if s.err != nil {
 		return ""
 	}
-	s := pinata.String()
-	if pinata.Error() != nil {
-		p.err = &PinataError{
+	str := s.String(pinata)
+	if s.err != nil {
+		s.err = &PinataError{
 			method: method,
 			reason: ErrorReasonIncompatibleType,
 			input:  []interface{}{index},
@@ -243,99 +283,92 @@ func (p *slicePinata) StringAtIndex(index int) string {
 		}
 		return ""
 	}
-	return s
+	return str
 }
 
-func (p *slicePinata) Contents() interface{} {
-	return p.contents
-}
+// this method assumes s.err != nil
+func (s *stick) pinataAtPath(p Pinata, method string, path ...string) Pinata {
+	contents, ok := p.Map()
 
-type mapPinata struct {
-	basePinata
-	contents map[string]interface{}
-}
+	if !ok {
+		s.pathUnsupported(method, path)
+		return Pinata{}
+	}
 
-// this method assumes p.err != nil
-func (p *mapPinata) pinataAtPath(method string, path ...string) Pinata {
 	if len(path) == 0 {
-		p.err = &PinataError{
+		s.err = &PinataError{
 			method: method,
 			reason: ErrorReasonInvalidInput,
 			input:  toInterfaceSlice(path),
 			advice: "specify a path",
 		}
-		return nil
+		return Pinata{}
 	}
 
-	contents := p.contents
 	for i := 0; i < len(path)-1; i++ {
 		current := path[i]
 		if v, ok := contents[current]; ok {
 			if v, ok := v.(map[string]interface{}); ok {
 				contents = v
 			} else {
-				p.err = &PinataError{
+				s.err = &PinataError{
 					method: method,
 					reason: ErrorReasonIncompatibleType,
 					input:  toInterfaceSlice(path),
 					advice: fmt.Sprintf(`"%s" does not hold a pinata`, strings.Join(path[:i+1], `", "`)),
 				}
-				return nil
+				return Pinata{}
 			}
 		} else {
-			p.err = &PinataError{
+			s.err = &PinataError{
 				method: method,
 				reason: ErrorReasonNotFound,
 				input:  toInterfaceSlice(path),
 				advice: fmt.Sprintf(`"%s" does not exist`, strings.Join(path[:i+1], `", "`)),
 			}
-			return nil
+			return Pinata{}
 		}
 	}
 
 	if v, ok := contents[path[len(path)-1]]; ok {
-		return New(v)
+		return NewPinata(v)
 	}
 
-	p.err = &PinataError{
+	s.err = &PinataError{
 		method: method,
 		reason: ErrorReasonNotFound,
 		input:  toInterfaceSlice(path),
 		advice: fmt.Sprintf(`"%s" does not exist`, strings.Join(path, `", "`)),
 	}
-	return nil
+	return Pinata{}
 }
 
-func (p *mapPinata) PinataAtPath(path ...string) Pinata {
-	if p.err != nil {
-		return nil
+func (s *stick) PinataAtPath(p Pinata, path ...string) Pinata {
+	if s.err != nil {
+		return Pinata{}
 	}
-	return p.pinataAtPath("PinataAtPath", path...)
+	return s.pinataAtPath(p, "PinataAtPath", path...)
 }
 
-func (p *mapPinata) StringAtPath(path ...string) string {
-	if p.err != nil {
+func (s *stick) StringAtPath(p Pinata, path ...string) string {
+	if s.err != nil {
 		return ""
 	}
 	const method = "StringAtPath"
-	pinata := p.pinataAtPath(method, path...)
-	if p.err != nil {
+	pinata := s.pinataAtPath(p, method, path...)
+	if s.err != nil {
 		return ""
 	}
-	s := pinata.String()
-	if pinata.Error() != nil {
-		p.err = &PinataError{
+	str := s.String(pinata)
+	if s.err != nil {
+		s.err = &PinataError{
 			method: method,
 			reason: ErrorReasonIncompatibleType,
 			input:  toInterfaceSlice(path),
 			advice: "not a string, try another type",
 		}
 	}
-	return s
-}
-
-func (p *mapPinata) Contents() interface{} {
-	return p.contents
+	return str
 }
 
 func toInterfaceSlice(c []string) []interface{} {

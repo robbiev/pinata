@@ -28,7 +28,7 @@ func New(contents interface{}) Pinata {
 	case map[string]interface{}:
 		return &mapPinata{contents: t}
 	case []interface{}:
-		return &slicePinata{}
+		return &slicePinata{contents: t}
 	}
 }
 
@@ -241,6 +241,7 @@ func (p *slicePinata) StringAtIndex(index int) string {
 			input:  []interface{}{index},
 			advice: "not a string, try another type",
 		}
+		return ""
 	}
 	return s
 }

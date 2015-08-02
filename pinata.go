@@ -4,7 +4,7 @@
 //
 // Unlike other packages most methods do not return an error type. They become
 // a no-op when the first error is found so the error can be checked after a
-// series of operations instead of at each operation seperately. Because of
+// series of operations instead of at each operation separately. Because of
 // this "late" error handling design special care is taken to return good
 // errors so you can still find out where things went wrong.
 //

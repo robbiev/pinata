@@ -55,7 +55,7 @@ func ExampleStick() {
 		return
 	}
 
-	stick, pinata := pinata.New(m)
+	stick, p := pinata.New(m)
 
 	type gopher struct {
 		Name  string
@@ -65,9 +65,9 @@ func ExampleStick() {
 
 	// no error handling here
 	kevin := gopher{
-		Name:  stick.PathString(pinata, "Name"),
-		Phone: stick.IndexString(stick.Path(pinata, "Phone"), 0),
-		City:  stick.PathString(pinata, "Address", "City"),
+		Name:  stick.PathString(p, "Name"),
+		Phone: stick.IndexString(stick.Path(p, "Phone"), 0),
+		City:  stick.PathString(p, "Address", "City"),
 	}
 
 	if err := stick.ClearError(); err != nil {

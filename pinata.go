@@ -49,31 +49,6 @@ type Stick interface {
 	IndexPinata(Pinata, int) Pinata
 }
 
-// ErrorContext contains information about the circumstances of an error.
-type ErrorContext struct {
-	methodName string
-	methodArgs func() []interface{}
-	next       *ErrorContext
-}
-
-// MethodName returns the name of the method that caused the error.
-func (ec ErrorContext) MethodName() string {
-	return ec.methodName
-}
-
-// MethodArgs returns the input parameters of the method that caused the error.
-func (ec ErrorContext) MethodArgs() []interface{} {
-	return ec.methodArgs()
-}
-
-// Next gets additional context linked to this one.
-func (ec ErrorContext) Next() (ErrorContext, bool) {
-	if ec.next != nil {
-		return *ec.next, true
-	}
-	return ErrorContext{}, false
-}
-
 // Pinata holds the data.
 type Pinata struct {
 	context  *ErrorContext
@@ -119,8 +94,6 @@ func (p otherPinata) Slice() ([]interface{}, bool) {
 	return nil, false
 }
 
-var _ = contents(mapPinata{})
-
 type mapPinata struct {
 	otherPinata
 	value map[string]interface{}
@@ -137,6 +110,31 @@ type slicePinata struct {
 
 func (p slicePinata) Slice() ([]interface{}, bool) {
 	return p.value, true
+}
+
+// ErrorContext contains information about the circumstances of an error.
+type ErrorContext struct {
+	methodName string
+	methodArgs func() []interface{}
+	next       *ErrorContext
+}
+
+// MethodName returns the name of the method that caused the error.
+func (ec ErrorContext) MethodName() string {
+	return ec.methodName
+}
+
+// MethodArgs returns the input parameters of the method that caused the error.
+func (ec ErrorContext) MethodArgs() []interface{} {
+	return ec.methodArgs()
+}
+
+// Next gets additional context linked to this one.
+func (ec ErrorContext) Next() (ErrorContext, bool) {
+	if ec.next != nil {
+		return *ec.next, true
+	}
+	return ErrorContext{}, false
 }
 
 // New is a starting point for a pinata celebration.
@@ -164,8 +162,6 @@ func newPinataWithContext(contents interface{}, context *ErrorContext) Pinata {
 		return Pinata{contents: &otherPinata{value: t}, context: context}
 	}
 }
-
-var _ = error(Error{})
 
 // ErrorReason describes the reason for returning an Error.
 type ErrorReason string

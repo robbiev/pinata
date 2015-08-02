@@ -114,18 +114,16 @@ func TestNullvsAbsent(t *testing.T) {
 	}
 
 	stick, pinata := pinata.New(m)
-	stick.PathNil(pinata, "Address", "City")
-	if err := stick.ClearError(); err != nil {
+
+	if stick.PathNil(pinata, "Address", "City"); stick.ClearError() != nil {
 		t.Errorf("error: %s", err)
 	}
 
-	stick.PathNil(pinata, "Address")
-	if err := stick.ClearError(); err == nil {
+	if stick.PathNil(pinata, "Address"); stick.ClearError() == nil {
 		t.Error("Address must not be nil")
 	}
 
-	stick.PathNil(pinata, "Address", "DoesNotExist")
-	if err := stick.ClearError(); err == nil {
+	if stick.PathNil(pinata, "Address", "DoesNotExist"); stick.ClearError() == nil {
 		t.Error("non-existent path must not be nil")
 	}
 

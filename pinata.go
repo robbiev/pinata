@@ -51,19 +51,19 @@ type Stick interface {
 
 // ErrorContext contains information about the circumstances of an error.
 type ErrorContext struct {
-	method      string
-	methodInput []interface{}
-	next        *ErrorContext
+	methodName string
+	methodArgs func() []interface{}
+	next       *ErrorContext
 }
 
 // MethodName returns the name of the method that caused the error.
 func (ec ErrorContext) MethodName() string {
-	return ec.method
+	return ec.methodName
 }
 
 // MethodArgs returns the input parameters of the method that caused the error.
 func (ec ErrorContext) MethodArgs() []interface{} {
-	return ec.methodInput
+	return ec.methodArgs()
 }
 
 // Next gets additional context linked to this one.
@@ -209,20 +209,20 @@ func (p Error) Error() string {
 	var summaries []string
 	current := p.context
 	for current != nil {
-		var methodInput = current.MethodArgs()
+		var methodArgs = current.MethodArgs()
 		var summary string
-		if len(methodInput) > 0 {
+		if len(methodArgs) > 0 {
 			var buf bytes.Buffer
 			_, _ = buf.WriteString(current.MethodName())
 			_ = buf.WriteByte('(')
-			for i := range methodInput {
+			for i := range methodArgs {
 				_, _ = buf.WriteString("%#v")
-				if i < len(methodInput)-1 {
+				if i < len(methodArgs)-1 {
 					_, _ = buf.WriteString(", ")
 				}
 			}
 			_ = buf.WriteByte(')')
-			summary = fmt.Sprintf(buf.String(), methodInput...)
+			summary = fmt.Sprintf(buf.String(), methodArgs...)
 			summaries = append(summaries, summary)
 		}
 		current = current.next
@@ -243,12 +243,12 @@ func (s *stick) Error() error {
 }
 
 // this method assumes s.err != nil
-func (s *stick) stringUnsupported(errCtx *ErrorContext, method string, input []interface{}, advice string) string {
+func (s *stick) stringUnsupported(errCtx *ErrorContext, methodName string, input func() []interface{}, advice string) string {
 	s.err = &Error{
 		context: &ErrorContext{
-			method:      method,
-			methodInput: input,
-			next:        errCtx,
+			methodName: methodName,
+			methodArgs: input,
+			next:       errCtx,
 		},
 		reason: ErrorReasonIncompatibleType,
 		advice: advice,
@@ -257,12 +257,12 @@ func (s *stick) stringUnsupported(errCtx *ErrorContext, method string, input []i
 }
 
 // this method assumes s.err != nil
-func (s *stick) indexUnsupported(errCtx *ErrorContext, method string, index int) {
+func (s *stick) indexUnsupported(errCtx *ErrorContext, methodName string, index int) {
 	s.err = &Error{
 		context: &ErrorContext{
-			method:      method,
-			methodInput: []interface{}{index},
-			next:        errCtx,
+			methodName: methodName,
+			methodArgs: func() []interface{} { return []interface{}{index} },
+			next:       errCtx,
 		},
 		reason: ErrorReasonIncompatibleType,
 		advice: "call this method on a slice pinata",
@@ -270,12 +270,12 @@ func (s *stick) indexUnsupported(errCtx *ErrorContext, method string, index int)
 }
 
 // this method assumes s.err != nil
-func (s *stick) pathUnsupported(errCtx *ErrorContext, method string, path []string) {
+func (s *stick) pathUnsupported(errCtx *ErrorContext, methodName string, path []string) {
 	s.err = &Error{
 		context: &ErrorContext{
-			method:      method,
-			methodInput: toInterfaceSlice(path),
-			next:        errCtx,
+			methodName: methodName,
+			methodArgs: func() []interface{} { return toInterfaceSlice(path) },
+			next:       errCtx,
 		},
 		reason: ErrorReasonIncompatibleType,
 		advice: "call this method on a map pinata",
@@ -283,35 +283,35 @@ func (s *stick) pathUnsupported(errCtx *ErrorContext, method string, path []stri
 }
 
 // this method assumes s.err != nil
-func (s *stick) internalString(p Pinata, method string, input []interface{}) string {
+func (s *stick) internalString(p Pinata, methodName string, input func() []interface{}) string {
 	if _, ok := p.Map(); ok {
-		return s.stringUnsupported(p.context, method, input, "this is a map")
+		return s.stringUnsupported(p.context, methodName, input, "this is a map")
 	}
 	if _, ok := p.Slice(); ok {
-		return s.stringUnsupported(p.context, method, input, "this is a slice")
+		return s.stringUnsupported(p.context, methodName, input, "this is a slice")
 	}
 	if v, ok := p.Value().(string); ok {
 		return v
 	}
-	return s.stringUnsupported(p.context, method, input, "this is not a string")
+	return s.stringUnsupported(p.context, methodName, input, "this is not a string")
 }
 
 func (s *stick) String(p Pinata) string {
 	if s.err != nil {
 		return ""
 	}
-	return s.internalString(p, "String", nil)
+	return s.internalString(p, "String", func() []interface{} { return nil })
 }
 
 // this method assumes s.err != nil
-func (s *stick) internalIndexPinata(p Pinata, method string, index int) Pinata {
+func (s *stick) internalIndexPinata(p Pinata, methodName string, index int) Pinata {
 	if slice, ok := p.Slice(); ok {
 		if index < 0 || index >= len(slice) {
 			s.err = &Error{
 				context: &ErrorContext{
-					method:      method,
-					methodInput: []interface{}{index},
-					next:        p.context,
+					methodName: methodName,
+					methodArgs: func() []interface{} { return []interface{}{index} },
+					next:       p.context,
 				},
 				reason: ErrorReasonInvalidInput,
 				advice: fmt.Sprintf("specify an index from 0 to %d", len(slice)-1),
@@ -319,12 +319,12 @@ func (s *stick) internalIndexPinata(p Pinata, method string, index int) Pinata {
 			return Pinata{}
 		}
 		return newPinataWithContext(slice[index], &ErrorContext{
-			method:      method,
-			methodInput: []interface{}{index},
-			next:        p.context,
+			methodName: methodName,
+			methodArgs: func() []interface{} { return []interface{}{index} },
+			next:       p.context,
 		})
 	}
-	s.indexUnsupported(p.context, method, index)
+	s.indexUnsupported(p.context, methodName, index)
 	return Pinata{}
 }
 
@@ -339,30 +339,30 @@ func (s *stick) IndexString(p Pinata, index int) string {
 	if s.err != nil {
 		return ""
 	}
-	const method = "IndexString"
-	pinata := s.internalIndexPinata(p, method, index)
+	const methodName = "IndexString"
+	pinata := s.internalIndexPinata(p, methodName, index)
 	if s.err != nil {
 		return ""
 	}
 	pinata.context = p.context
-	return s.internalString(pinata, method, []interface{}{index})
+	return s.internalString(pinata, methodName, func() []interface{} { return []interface{}{index} })
 }
 
 // this method assumes s.err != nil
-func (s *stick) internalPathPinata(p Pinata, method string, path ...string) Pinata {
+func (s *stick) internalPathPinata(p Pinata, methodName string, path ...string) Pinata {
 	contents, ok := p.Map()
 
 	if !ok {
-		s.pathUnsupported(p.context, method, path)
+		s.pathUnsupported(p.context, methodName, path)
 		return Pinata{}
 	}
 
 	if len(path) == 0 {
 		s.err = &Error{
 			context: &ErrorContext{
-				method:      method,
-				methodInput: toInterfaceSlice(path),
-				next:        p.context,
+				methodName: methodName,
+				methodArgs: func() []interface{} { return toInterfaceSlice(path) },
+				next:       p.context,
 			},
 			reason: ErrorReasonInvalidInput,
 			advice: "specify a path",
@@ -378,9 +378,9 @@ func (s *stick) internalPathPinata(p Pinata, method string, path ...string) Pina
 			} else {
 				s.err = &Error{
 					context: &ErrorContext{
-						method:      method,
-						methodInput: toInterfaceSlice(path),
-						next:        p.context,
+						methodName: methodName,
+						methodArgs: func() []interface{} { return toInterfaceSlice(path) },
+						next:       p.context,
 					},
 					reason: ErrorReasonIncompatibleType,
 					advice: fmt.Sprintf(`"%s" does not hold a pinata`, strings.Join(path[:i+1], `", "`)),
@@ -390,9 +390,9 @@ func (s *stick) internalPathPinata(p Pinata, method string, path ...string) Pina
 		} else {
 			s.err = &Error{
 				context: &ErrorContext{
-					method:      method,
-					methodInput: toInterfaceSlice(path),
-					next:        p.context,
+					methodName: methodName,
+					methodArgs: func() []interface{} { return toInterfaceSlice(path) },
+					next:       p.context,
 				},
 				reason: ErrorReasonNotFound,
 				advice: fmt.Sprintf(`"%s" does not exist`, strings.Join(path[:i+1], `", "`)),
@@ -403,17 +403,17 @@ func (s *stick) internalPathPinata(p Pinata, method string, path ...string) Pina
 
 	if v, ok := contents[path[len(path)-1]]; ok {
 		return newPinataWithContext(v, &ErrorContext{
-			method:      method,
-			methodInput: toInterfaceSlice(path),
-			next:        p.context,
+			methodName: methodName,
+			methodArgs: func() []interface{} { return toInterfaceSlice(path) },
+			next:       p.context,
 		})
 	}
 
 	s.err = &Error{
 		context: &ErrorContext{
-			method:      method,
-			methodInput: toInterfaceSlice(path),
-			next:        p.context,
+			methodName: methodName,
+			methodArgs: func() []interface{} { return toInterfaceSlice(path) },
+			next:       p.context,
 		},
 		reason: ErrorReasonNotFound,
 		advice: fmt.Sprintf(`"%s" does not exist`, strings.Join(path, `", "`)),
@@ -432,13 +432,13 @@ func (s *stick) PathString(p Pinata, path ...string) string {
 	if s.err != nil {
 		return ""
 	}
-	const method = "PathString"
-	pinata := s.internalPathPinata(p, method, path...)
+	const methodName = "PathString"
+	pinata := s.internalPathPinata(p, methodName, path...)
 	if s.err != nil {
 		return ""
 	}
 	pinata.context = p.context
-	return s.internalString(pinata, method, toInterfaceSlice(path))
+	return s.internalString(pinata, methodName, func() []interface{} { return toInterfaceSlice(path) })
 }
 
 func toInterfaceSlice(c []string) []interface{} {

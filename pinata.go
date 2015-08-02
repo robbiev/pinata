@@ -39,6 +39,32 @@ type Stick interface {
 	// The input Pinata must hold a []interface{}.
 	IndexString(Pinata, int) string
 
+	// PathFloat64 gets the float64 value at the given path within the Pinata.
+	// The last element in the path must be a float64, the rest must be a
+	// map[string]interface{}. The input Pinata must hold a
+	// map[string]interface{} as well.
+	PathFloat64(Pinata, ...string) float64
+
+	// Float64 returns the Pinata as a float64 if it is one.
+	Float64(Pinata) float64
+
+	// IndexFloat64 gets the string float64 at the given index within the Pinata.
+	// The input Pinata must hold a []interface{}.
+	IndexFloat64(Pinata, int) float64
+
+	// PathBool gets the bool value at the given path within the Pinata.
+	// The last element in the path must be a bool, the rest must be a
+	// map[string]interface{}. The input Pinata must hold a
+	// map[string]interface{} as well.
+	PathBool(Pinata, ...string) bool
+
+	// Bool returns the Pinata as a bool if it is one.
+	Bool(Pinata) bool
+
+	// IndexBool gets the string bool at the given index within the Pinata.
+	// The input Pinata must hold a []interface{}.
+	IndexBool(Pinata, int) bool
+
 	// Path gets the Pinata value at the given path within the Pinata. All
 	// elements in the path must be of type map[string]interface{}. The input
 	// Pinata must hold a map[string]interface{} as well.
@@ -62,7 +88,7 @@ func (s *stick) Error() error {
 }
 
 // this method assumes s.err != nil
-func (s *stick) stringUnsupported(errCtx *ErrorContext, methodName string, input func() []interface{}, advice string) string {
+func (s *stick) unsupported(errCtx *ErrorContext, methodName string, input func() []interface{}, advice string) {
 	s.err = &Error{
 		context: &ErrorContext{
 			methodName: methodName,
@@ -72,7 +98,6 @@ func (s *stick) stringUnsupported(errCtx *ErrorContext, methodName string, input
 		reason: ErrorReasonIncompatibleType,
 		advice: advice,
 	}
-	return ""
 }
 
 // this method assumes s.err != nil
@@ -104,15 +129,52 @@ func (s *stick) pathUnsupported(errCtx *ErrorContext, methodName string, path []
 // this method assumes s.err != nil
 func (s *stick) internalString(p Pinata, methodName string, input func() []interface{}) string {
 	if _, ok := p.Map(); ok {
-		return s.stringUnsupported(p.context, methodName, input, "this is a map")
+		s.unsupported(p.context, methodName, input, "this is a map")
+		return ""
 	}
 	if _, ok := p.Slice(); ok {
-		return s.stringUnsupported(p.context, methodName, input, "this is a slice")
+		s.unsupported(p.context, methodName, input, "this is a slice")
+		return ""
 	}
 	if v, ok := p.Value().(string); ok {
 		return v
 	}
-	return s.stringUnsupported(p.context, methodName, input, "this is not a string")
+	s.unsupported(p.context, methodName, input, "this is not a string")
+	return ""
+}
+
+// this method assumes s.err != nil
+func (s *stick) internalFloat64(p Pinata, methodName string, input func() []interface{}) float64 {
+	if _, ok := p.Map(); ok {
+		s.unsupported(p.context, methodName, input, "this is a map")
+		return 0
+	}
+	if _, ok := p.Slice(); ok {
+		s.unsupported(p.context, methodName, input, "this is a slice")
+		return 0
+	}
+	if v, ok := p.Value().(float64); ok {
+		return v
+	}
+	s.unsupported(p.context, methodName, input, "this is not a float64")
+	return 0
+}
+
+// this method assumes s.err != nil
+func (s *stick) internalBool(p Pinata, methodName string, input func() []interface{}) bool {
+	if _, ok := p.Map(); ok {
+		s.unsupported(p.context, methodName, input, "this is a map")
+		return false
+	}
+	if _, ok := p.Slice(); ok {
+		s.unsupported(p.context, methodName, input, "this is a slice")
+		return false
+	}
+	if v, ok := p.Value().(bool); ok {
+		return v
+	}
+	s.unsupported(p.context, methodName, input, "this is not a bool")
+	return false
 }
 
 func (s *stick) String(p Pinata) string {
@@ -120,6 +182,20 @@ func (s *stick) String(p Pinata) string {
 		return ""
 	}
 	return s.internalString(p, "String", func() []interface{} { return nil })
+}
+
+func (s *stick) Bool(p Pinata) bool {
+	if s.err != nil {
+		return false
+	}
+	return s.internalBool(p, "Bool", func() []interface{} { return nil })
+}
+
+func (s *stick) Float64(p Pinata) float64 {
+	if s.err != nil {
+		return 0
+	}
+	return s.internalFloat64(p, "Float64", func() []interface{} { return nil })
 }
 
 // this method assumes s.err != nil
@@ -165,6 +241,32 @@ func (s *stick) IndexString(p Pinata, index int) string {
 	}
 	pinata.context = p.context
 	return s.internalString(pinata, methodName, func() []interface{} { return []interface{}{index} })
+}
+
+func (s *stick) IndexFloat64(p Pinata, index int) float64 {
+	if s.err != nil {
+		return 0
+	}
+	const methodName = "IndexFloat64"
+	pinata := s.internalIndex(p, methodName, index)
+	if s.err != nil {
+		return 0
+	}
+	pinata.context = p.context
+	return s.internalFloat64(pinata, methodName, func() []interface{} { return []interface{}{index} })
+}
+
+func (s *stick) IndexBool(p Pinata, index int) bool {
+	if s.err != nil {
+		return false
+	}
+	const methodName = "IndexBool"
+	pinata := s.internalIndex(p, methodName, index)
+	if s.err != nil {
+		return false
+	}
+	pinata.context = p.context
+	return s.internalBool(pinata, methodName, func() []interface{} { return []interface{}{index} })
 }
 
 // this method assumes s.err != nil
@@ -258,6 +360,32 @@ func (s *stick) PathString(p Pinata, path ...string) string {
 	}
 	pinata.context = p.context
 	return s.internalString(pinata, methodName, func() []interface{} { return toInterfaceSlice(path) })
+}
+
+func (s *stick) PathFloat64(p Pinata, path ...string) float64 {
+	if s.err != nil {
+		return 0
+	}
+	const methodName = "PathFloat64"
+	pinata := s.internalPath(p, methodName, path...)
+	if s.err != nil {
+		return 0
+	}
+	pinata.context = p.context
+	return s.internalFloat64(pinata, methodName, func() []interface{} { return toInterfaceSlice(path) })
+}
+
+func (s *stick) PathBool(p Pinata, path ...string) bool {
+	if s.err != nil {
+		return false
+	}
+	const methodName = "PathBool"
+	pinata := s.internalPath(p, methodName, path...)
+	if s.err != nil {
+		return false
+	}
+	pinata.context = p.context
+	return s.internalBool(pinata, methodName, func() []interface{} { return toInterfaceSlice(path) })
 }
 
 // Pinata holds the data.

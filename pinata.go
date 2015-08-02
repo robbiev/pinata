@@ -49,167 +49,6 @@ type Stick interface {
 	IndexPinata(Pinata, int) Pinata
 }
 
-// Pinata holds the data.
-type Pinata struct {
-	context   *ErrorContext
-	value     interface{}
-	mapFunc   func() (map[string]interface{}, bool)
-	sliceFunc func() ([]interface{}, bool)
-}
-
-// Value returns the raw Pinata value.
-func (p Pinata) Value() interface{} {
-	return p.value
-}
-
-// Map returns the Pinata value as a map if it is one (the bool indicates
-// success).
-func (p Pinata) Map() (map[string]interface{}, bool) {
-	return p.mapFunc()
-}
-
-// Slice returns the Pinata value as a slice if it is one (the bool indicates
-// success).
-func (p Pinata) Slice() ([]interface{}, bool) {
-	return p.sliceFunc()
-}
-
-// ErrorContext contains information about the circumstances of an error.
-type ErrorContext struct {
-	methodName string
-	methodArgs func() []interface{}
-	next       *ErrorContext
-}
-
-// MethodName returns the name of the method that caused the error.
-func (ec ErrorContext) MethodName() string {
-	return ec.methodName
-}
-
-// MethodArgs returns the input parameters of the method that caused the error.
-func (ec ErrorContext) MethodArgs() []interface{} {
-	return ec.methodArgs()
-}
-
-// Next gets additional context linked to this one.
-func (ec ErrorContext) Next() (ErrorContext, bool) {
-	if ec.next != nil {
-		return *ec.next, true
-	}
-	return ErrorContext{}, false
-}
-
-// New is a starting point for a pinata celebration.
-func New(contents interface{}) (Stick, Pinata) {
-	return NewStick(), NewPinata(contents)
-}
-
-// NewStick returns a new Stick to hit a Pinata with.
-func NewStick() Stick {
-	return &stick{}
-}
-
-// NewPinata creates a new Pinata holding the specified value.
-func NewPinata(contents interface{}) Pinata {
-	return newPinataWithContext(contents, nil)
-}
-
-func noMap() (map[string]interface{}, bool) { return nil, false }
-func noSlice() ([]interface{}, bool)        { return nil, false }
-
-func newPinataWithContext(contents interface{}, context *ErrorContext) Pinata {
-	switch t := contents.(type) {
-	case map[string]interface{}:
-		return Pinata{
-			value:     t,
-			sliceFunc: noSlice,
-			mapFunc: func() (map[string]interface{}, bool) {
-				return t, true
-			},
-			context: context,
-		}
-	case []interface{}:
-		return Pinata{
-			value: t,
-			sliceFunc: func() ([]interface{}, bool) {
-				return t, true
-			},
-			mapFunc: noMap,
-			context: context,
-		}
-	default:
-		return Pinata{
-			value:     t,
-			sliceFunc: noSlice,
-			mapFunc:   noMap,
-			context:   context,
-		}
-	}
-}
-
-// ErrorReason describes the reason for returning an Error.
-type ErrorReason string
-
-const (
-	// ErrorReasonIncompatibleType indicates the contents of the Pinata is not compatible with the invoked method.
-	ErrorReasonIncompatibleType ErrorReason = "incompatible type"
-	// ErrorReasonNotFound indicates the input has not been found in the Pinata.
-	ErrorReasonNotFound = "not found"
-	// ErrorReasonInvalidInput indicates the input is not in the expected range or format.
-	ErrorReasonInvalidInput = "invalid input"
-)
-
-// Error is set on the Pinata when something goes wrong.
-type Error struct {
-	reason  ErrorReason
-	context *ErrorContext
-	advice  string
-}
-
-// Reason indicates why the error occurred.
-func (p Error) Reason() ErrorReason {
-	return p.reason
-}
-
-// Context returns more information about the circumstances of the error.
-func (p Error) Context() (ErrorContext, bool) {
-	if p.context != nil {
-		return *p.context, true
-	}
-	return ErrorContext{}, false
-}
-
-// Advice contains a human readable hint detailing how to remedy this error.
-func (p Error) Advice() string {
-	return p.advice
-}
-
-// Error returns a summary of the problem.
-func (p Error) Error() string {
-	var summaries []string
-	current := p.context
-	for current != nil {
-		var methodArgs = current.MethodArgs()
-		var summary string
-		if len(methodArgs) > 0 {
-			var buf bytes.Buffer
-			_, _ = buf.WriteString(current.MethodName())
-			_ = buf.WriteByte('(')
-			for i := range methodArgs {
-				_, _ = buf.WriteString("%#v")
-				if i < len(methodArgs)-1 {
-					_, _ = buf.WriteString(", ")
-				}
-			}
-			_ = buf.WriteByte(')')
-			summary = fmt.Sprintf(buf.String(), methodArgs...)
-			summaries = append(summaries, summary)
-		}
-		current = current.next
-	}
-	return fmt.Sprintf("pinata: %s (%s): \n\t%v", p.Reason(), p.Advice(), strings.Join(summaries, " :: "))
-}
-
 type stick struct {
 	err error
 }
@@ -419,6 +258,167 @@ func (s *stick) PathString(p Pinata, path ...string) string {
 	}
 	pinata.context = p.context
 	return s.internalString(pinata, methodName, func() []interface{} { return toInterfaceSlice(path) })
+}
+
+// Pinata holds the data.
+type Pinata struct {
+	context   *ErrorContext
+	value     interface{}
+	mapFunc   func() (map[string]interface{}, bool)
+	sliceFunc func() ([]interface{}, bool)
+}
+
+// Value returns the raw Pinata value.
+func (p Pinata) Value() interface{} {
+	return p.value
+}
+
+// Map returns the Pinata value as a map if it is one (the bool indicates
+// success).
+func (p Pinata) Map() (map[string]interface{}, bool) {
+	return p.mapFunc()
+}
+
+// Slice returns the Pinata value as a slice if it is one (the bool indicates
+// success).
+func (p Pinata) Slice() ([]interface{}, bool) {
+	return p.sliceFunc()
+}
+
+// New is a starting point for a pinata celebration.
+func New(contents interface{}) (Stick, Pinata) {
+	return NewStick(), NewPinata(contents)
+}
+
+// NewStick returns a new Stick to hit a Pinata with.
+func NewStick() Stick {
+	return &stick{}
+}
+
+// NewPinata creates a new Pinata holding the specified value.
+func NewPinata(contents interface{}) Pinata {
+	return newPinataWithContext(contents, nil)
+}
+
+func noMap() (map[string]interface{}, bool) { return nil, false }
+func noSlice() ([]interface{}, bool)        { return nil, false }
+
+func newPinataWithContext(contents interface{}, context *ErrorContext) Pinata {
+	switch t := contents.(type) {
+	case map[string]interface{}:
+		return Pinata{
+			value:     t,
+			sliceFunc: noSlice,
+			mapFunc: func() (map[string]interface{}, bool) {
+				return t, true
+			},
+			context: context,
+		}
+	case []interface{}:
+		return Pinata{
+			value: t,
+			sliceFunc: func() ([]interface{}, bool) {
+				return t, true
+			},
+			mapFunc: noMap,
+			context: context,
+		}
+	default:
+		return Pinata{
+			value:     t,
+			sliceFunc: noSlice,
+			mapFunc:   noMap,
+			context:   context,
+		}
+	}
+}
+
+// ErrorReason describes the reason for returning an Error.
+type ErrorReason string
+
+const (
+	// ErrorReasonIncompatibleType indicates the contents of the Pinata is not compatible with the invoked method.
+	ErrorReasonIncompatibleType ErrorReason = "incompatible type"
+	// ErrorReasonNotFound indicates the input has not been found in the Pinata.
+	ErrorReasonNotFound = "not found"
+	// ErrorReasonInvalidInput indicates the input is not in the expected range or format.
+	ErrorReasonInvalidInput = "invalid input"
+)
+
+// ErrorContext contains information about the circumstances of an error.
+type ErrorContext struct {
+	methodName string
+	methodArgs func() []interface{}
+	next       *ErrorContext
+}
+
+// MethodName returns the name of the method that caused the error.
+func (ec ErrorContext) MethodName() string {
+	return ec.methodName
+}
+
+// MethodArgs returns the input parameters of the method that caused the error.
+func (ec ErrorContext) MethodArgs() []interface{} {
+	return ec.methodArgs()
+}
+
+// Next gets additional context linked to this one.
+func (ec ErrorContext) Next() (ErrorContext, bool) {
+	if ec.next != nil {
+		return *ec.next, true
+	}
+	return ErrorContext{}, false
+}
+
+// Error is set on the Pinata when something goes wrong.
+type Error struct {
+	reason  ErrorReason
+	context *ErrorContext
+	advice  string
+}
+
+// Reason indicates why the error occurred.
+func (p Error) Reason() ErrorReason {
+	return p.reason
+}
+
+// Context returns more information about the circumstances of the error.
+func (p Error) Context() (ErrorContext, bool) {
+	if p.context != nil {
+		return *p.context, true
+	}
+	return ErrorContext{}, false
+}
+
+// Advice contains a human readable hint detailing how to remedy this error.
+func (p Error) Advice() string {
+	return p.advice
+}
+
+// Error returns a summary of the problem.
+func (p Error) Error() string {
+	var summaries []string
+	current := p.context
+	for current != nil {
+		var methodArgs = current.MethodArgs()
+		var summary string
+		if len(methodArgs) > 0 {
+			var buf bytes.Buffer
+			_, _ = buf.WriteString(current.MethodName())
+			_ = buf.WriteByte('(')
+			for i := range methodArgs {
+				_, _ = buf.WriteString("%#v")
+				if i < len(methodArgs)-1 {
+					_, _ = buf.WriteString(", ")
+				}
+			}
+			_ = buf.WriteByte(')')
+			summary = fmt.Sprintf(buf.String(), methodArgs...)
+			summaries = append(summaries, summary)
+		}
+		current = current.next
+	}
+	return fmt.Sprintf("pinata: %s (%s): \n\t%v", p.Reason(), p.Advice(), strings.Join(summaries, " :: "))
 }
 
 func toInterfaceSlice(c []string) []interface{} {

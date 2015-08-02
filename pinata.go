@@ -51,65 +51,27 @@ type Stick interface {
 
 // Pinata holds the data.
 type Pinata struct {
-	context  *ErrorContext
-	contents contents
+	context   *ErrorContext
+	value     interface{}
+	mapFunc   func() (map[string]interface{}, bool)
+	sliceFunc func() ([]interface{}, bool)
 }
 
 // Value returns the raw Pinata value.
 func (p Pinata) Value() interface{} {
-	return p.contents.Value()
+	return p.value
 }
 
 // Map returns the Pinata value as a map if it is one (the bool indicates
 // success).
 func (p Pinata) Map() (map[string]interface{}, bool) {
-	return p.contents.Map()
+	return p.mapFunc()
 }
 
 // Slice returns the Pinata value as a slice if it is one (the bool indicates
 // success).
 func (p Pinata) Slice() ([]interface{}, bool) {
-	return p.contents.Slice()
-}
-
-type contents interface {
-	Value() interface{}
-	Map() (map[string]interface{}, bool)
-	Slice() ([]interface{}, bool)
-}
-
-type otherPinata struct {
-	value interface{}
-}
-
-func (p otherPinata) Value() interface{} {
-	return p.value
-}
-
-func (p otherPinata) Map() (map[string]interface{}, bool) {
-	return nil, false
-}
-
-func (p otherPinata) Slice() ([]interface{}, bool) {
-	return nil, false
-}
-
-type mapPinata struct {
-	otherPinata
-	value map[string]interface{}
-}
-
-func (p mapPinata) Map() (map[string]interface{}, bool) {
-	return p.value, true
-}
-
-type slicePinata struct {
-	otherPinata
-	value []interface{}
-}
-
-func (p slicePinata) Slice() ([]interface{}, bool) {
-	return p.value, true
+	return p.sliceFunc()
 }
 
 // ErrorContext contains information about the circumstances of an error.
@@ -152,14 +114,36 @@ func NewPinata(contents interface{}) Pinata {
 	return newPinataWithContext(contents, nil)
 }
 
+func noMap() (map[string]interface{}, bool) { return nil, false }
+func noSlice() ([]interface{}, bool)        { return nil, false }
+
 func newPinataWithContext(contents interface{}, context *ErrorContext) Pinata {
 	switch t := contents.(type) {
 	case map[string]interface{}:
-		return Pinata{contents: &mapPinata{value: t}, context: context}
+		return Pinata{
+			value:     t,
+			sliceFunc: noSlice,
+			mapFunc: func() (map[string]interface{}, bool) {
+				return t, true
+			},
+			context: context,
+		}
 	case []interface{}:
-		return Pinata{contents: &slicePinata{value: t}, context: context}
+		return Pinata{
+			value: t,
+			sliceFunc: func() ([]interface{}, bool) {
+				return t, true
+			},
+			mapFunc: noMap,
+			context: context,
+		}
 	default:
-		return Pinata{contents: &otherPinata{value: t}, context: context}
+		return Pinata{
+			value:     t,
+			sliceFunc: noSlice,
+			mapFunc:   noMap,
+			context:   context,
+		}
 	}
 }
 

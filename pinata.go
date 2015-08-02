@@ -614,10 +614,12 @@ func (p Error) Error() string {
 			_ = buf.WriteByte(')')
 			summary = fmt.Sprintf(buf.String(), methodArgs...)
 			summaries = append(summaries, summary)
+		} else {
+			summaries = append(summaries, current.MethodName()+"()")
 		}
 		current = current.next
 	}
-	return fmt.Sprintf("pinata: %s (%s): \n\t%v", p.Reason(), p.Advice(), strings.Join(summaries, " :: "))
+	return fmt.Sprintf("pinata: %s (%s) at %v", p.Reason(), p.Advice(), strings.Join(summaries, " at "))
 }
 
 func toInterfaceSlice(c []string) []interface{} {

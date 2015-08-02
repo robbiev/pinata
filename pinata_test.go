@@ -85,6 +85,74 @@ func ExampleStick() {
 	// City: Gophertown
 }
 
+func TestFailureScenario(t *testing.T) {
+	const message = `
+	{
+		"Name": "Kevin",
+		"Phone": ["+44 20 7123 4567", "+44 20 4567 7123"],
+		"Address": {
+			"Street": "1 Gopher Road",
+			"City": "Gophertown"
+		}
+	}`
+
+	var m map[string]interface{}
+
+	{
+		err := json.Unmarshal([]byte(message), &m)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+
+	stick, thePinata := pinata.New(m)
+
+	stick.IndexFloat64(stick.Path(thePinata, "Phone"), 1)
+	err := stick.ClearError()
+	if err == nil {
+		t.Error("phone must not be a float64")
+		return
+	}
+	pinataErr := err.(*pinata.Error)
+	if pinataErr.Reason() != pinata.ErrorReasonIncompatibleType {
+		t.Error("error reason must be incompatible type")
+	}
+
+	ctx, ok := pinataErr.Context()
+	if !ok {
+		t.Error("error must have a context")
+	}
+	if ctx.MethodName() != "IndexFloat64" {
+		t.Error("error method name must be IndexFloat64")
+	}
+	if len(ctx.MethodArgs()) != 1 {
+		t.Error("error method input must have one element")
+	}
+	if ctx.MethodArgs()[0] != 1 {
+		t.Error("error method input must be 1")
+	}
+
+	ctx2, ok2 := ctx.Next()
+	if !ok2 {
+		t.Error("error must have a linked context")
+	}
+	if ctx2.MethodName() != "Path" {
+		t.Error("error method name must be Path")
+	}
+	if len(ctx2.MethodArgs()) != 1 {
+		t.Error("error method input must have one element")
+	}
+	if ctx2.MethodArgs()[0] != "Phone" {
+		t.Error("error method input must be 1")
+	}
+
+	_, ok3 := ctx2.Next()
+	if ok3 {
+		t.Error("linked context must have no further linked contexts")
+	}
+}
+
 func TestIndex(t *testing.T) {
 	stick, thePinata := start(t)
 	{

@@ -241,6 +241,92 @@ func TestString(t *testing.T) {
 	}
 }
 
+func TestFloat64(t *testing.T) {
+	stick := pinata.NewStick()
+	{
+		stick.Float64(pinata.Pinata{})
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("empty pinata must not be a float64")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.Float64(pinata.NewPinata(""))
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-float64 pinata must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.Float64(pinata.NewPinata(make(map[string]interface{})))
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-float64 pinata must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.Float64(pinata.NewPinata(make([]interface{}, 0)))
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-float64 pinata must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	if stick.Float64(pinata.NewPinata(float64(0))); stick.ClearError() != nil {
+		t.Error("float64 pinata must not result in an error")
+	}
+}
+
+func TestBool(t *testing.T) {
+	stick := pinata.NewStick()
+	{
+		stick.Bool(pinata.Pinata{})
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("empty pinata must not be a bool")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.Bool(pinata.NewPinata(""))
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-bool pinata must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.Bool(pinata.NewPinata(make(map[string]interface{})))
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-bool pinata must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.Bool(pinata.NewPinata(make([]interface{}, 0)))
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-bool pinata must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	if stick.Bool(pinata.NewPinata(true)); stick.ClearError() != nil {
+		t.Error("bool pinata must not result in an error")
+	}
+}
+
 func TestNullvsAbsent(t *testing.T) {
 	stick, pinata := start(t)
 

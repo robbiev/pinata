@@ -198,6 +198,49 @@ func TestPath(t *testing.T) {
 	}
 }
 
+func TestString(t *testing.T) {
+	stick := pinata.NewStick()
+	{
+		stick.String(pinata.Pinata{})
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("empty pinata must not be string")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.String(pinata.NewPinata(0))
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-string pinata must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.String(pinata.NewPinata(make(map[string]interface{})))
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-string pinata must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.String(pinata.NewPinata(make([]interface{}, 0)))
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-string pinata must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	if stick.String(pinata.NewPinata("hello")); stick.ClearError() != nil {
+		t.Error("string pinata must not result in an error")
+	}
+}
+
 func TestNullvsAbsent(t *testing.T) {
 	stick, pinata := start(t)
 

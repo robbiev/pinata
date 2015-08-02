@@ -8,7 +8,27 @@ import (
 	"github.com/robbiev/pinata"
 )
 
-const str = "test string"
+func start() (pinata.Stick, pinata.Pinata) {
+	const message = `
+	{
+		"Name": "Kevin",
+		"Phone": ["+44 20 7123 4567", "+44 20 4567 7123"],
+		"Address": {
+			"Street": "1 Gopher Road",
+			"City": null
+		}
+	}`
+
+	var m map[string]interface{}
+
+	err := json.Unmarshal([]byte(message), &m)
+	if err != nil {
+		fmt.Println(err)
+		return nil, pinata.Pinata{}
+	}
+
+	return pinata.New(m)
+}
 
 func ExampleStick() {
 	const message = `
@@ -60,25 +80,7 @@ func ExampleStick() {
 }
 
 func TestPinata(t *testing.T) {
-	const message = `
-	{
-		"Name": "Kevin",
-		"Phone": ["+44 20 7123 4567", "+44 20 4567 7123"],
-		"Address": {
-			"Street": "1 Gopher Road",
-			"City": "Gophertown"
-		}
-	}`
-
-	var m map[string]interface{}
-
-	err := json.Unmarshal([]byte(message), &m)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	stick, pinata := pinata.New(m)
+	stick, pinata := start()
 
 	stick.PathString(pinata, "Phone")
 	if err := stick.ClearError(); err != nil {
@@ -95,27 +97,10 @@ func TestPinata(t *testing.T) {
 }
 
 func TestNullvsAbsent(t *testing.T) {
-	const message = `
-	{
-		"Name": "Kevin",
-		"Phone": ["+44 20 7123 4567", "+44 20 4567 7123"],
-		"Address": {
-			"Street": "1 Gopher Road",
-			"City": null
-		}
-	}`
+	stick, pinata := start()
 
-	var m map[string]interface{}
-
-	err := json.Unmarshal([]byte(message), &m)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	stick, pinata := pinata.New(m)
-
-	if stick.PathNil(pinata, "Address", "City"); stick.ClearError() != nil {
+	stick.PathNil(pinata, "Address", "City")
+	if err := stick.ClearError(); err != nil {
 		t.Errorf("error: %s", err)
 	}
 

@@ -8,7 +8,7 @@ import (
 	"github.com/robbiev/pinata"
 )
 
-func start() (pinata.Stick, pinata.Pinata) {
+func start(t *testing.T) (pinata.Stick, pinata.Pinata) {
 	const message = `
 	{
 		"Name": "Kevin",
@@ -29,7 +29,7 @@ func start() (pinata.Stick, pinata.Pinata) {
 
 	err := json.Unmarshal([]byte(message), &m)
 	if err != nil {
-		fmt.Println(err)
+		t.Log(err)
 		return nil, pinata.Pinata{}
 	}
 
@@ -85,15 +85,52 @@ func ExampleStick() {
 	// City: Gophertown
 }
 
+func TestIndex(t *testing.T) {
+	stick, thePinata := start(t)
+	{
+		stick.Index(pinata.Pinata{}, 0)
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("empty pinata must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.Index(stick.Path(thePinata, "Address"), 0)
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("accessing a non-slice pinata by index must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.Index(stick.Path(thePinata, "Phone"), -1)
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("negative index must result in an error")
+		} else {
+			t.Log(err)
+		}
+	}
+	{
+		stick.Index(stick.Path(thePinata, "Phone"), 1)
+		if err := stick.ClearError(); err != nil {
+			t.Error("Phone entry with index 1 must exist", err)
+		}
+	}
+}
+
 func TestPath(t *testing.T) {
-	stick, thePinata := start()
+	stick, thePinata := start(t)
 	{
 		stick.Path(pinata.Pinata{}, "nope")
 		err := stick.ClearError()
 		if err == nil {
 			t.Error("empty pinata must result in an error")
 		} else {
-			fmt.Println(err)
+			t.Log(err)
 		}
 	}
 	{
@@ -102,7 +139,7 @@ func TestPath(t *testing.T) {
 		if err == nil {
 			t.Error("empty path must result in an error")
 		} else {
-			fmt.Println(err)
+			t.Log(err)
 		}
 	}
 	{
@@ -111,7 +148,7 @@ func TestPath(t *testing.T) {
 		if err == nil {
 			t.Error("non-existent path must result in an error")
 		} else {
-			fmt.Println(err)
+			t.Log(err)
 		}
 	}
 	{
@@ -120,7 +157,7 @@ func TestPath(t *testing.T) {
 		if err == nil {
 			t.Error("non-existent path must result in an error")
 		} else {
-			fmt.Println(err)
+			t.Log(err)
 		}
 	}
 	{
@@ -129,7 +166,7 @@ func TestPath(t *testing.T) {
 		if err == nil {
 			t.Error("non-existent path must result in an error")
 		} else {
-			fmt.Println(err)
+			t.Log(err)
 		}
 	}
 	{
@@ -138,7 +175,7 @@ func TestPath(t *testing.T) {
 		if err == nil {
 			t.Error("path that hits the wrong type must result in an error")
 		} else {
-			fmt.Println(err)
+			t.Log(err)
 		}
 	}
 	{
@@ -162,7 +199,7 @@ func TestPath(t *testing.T) {
 }
 
 func TestNullvsAbsent(t *testing.T) {
-	stick, pinata := start()
+	stick, pinata := start(t)
 
 	stick.PathNil(pinata, "Address", "City")
 	if err := stick.ClearError(); err != nil {

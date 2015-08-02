@@ -468,13 +468,20 @@ func (p Pinata) Value() interface{} {
 // Map returns the Pinata value as a map if it is one (the bool indicates
 // success).
 func (p Pinata) Map() (map[string]interface{}, bool) {
-	return p.mapFunc()
+	if p.mapFunc != nil {
+		return p.mapFunc()
+	}
+	return noMap()
 }
 
 // Slice returns the Pinata value as a slice if it is one (the bool indicates
 // success).
 func (p Pinata) Slice() ([]interface{}, bool) {
-	return p.sliceFunc()
+	if p.sliceFunc != nil {
+		return p.sliceFunc()
+
+	}
+	return noSlice()
 }
 
 // New is a starting point for a pinata celebration.

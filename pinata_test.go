@@ -16,7 +16,13 @@ func start() (pinata.Stick, pinata.Pinata) {
 		"Address": {
 			"Street": "1 Gopher Road",
 			"City": null
-		}
+		},
+		"Hobbies": [
+		  {
+				"Indoors": ["napping", "watching TV", "jumping up and down"],
+				"Outdoors": ["napping", "hiking", "petanque"]
+			}
+		]
 	}`
 
 	var m map[string]interface{}
@@ -79,20 +85,79 @@ func ExampleStick() {
 	// City: Gophertown
 }
 
-func TestPinata(t *testing.T) {
-	stick, pinata := start()
-
-	stick.PathString(pinata, "Phone")
-	if err := stick.ClearError(); err != nil {
-		fmt.Println(err)
+func TestPath(t *testing.T) {
+	stick, thePinata := start()
+	{
+		stick.Path(pinata.Pinata{}, "nope")
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("empty pinata must result in an error")
+		} else {
+			fmt.Println(err)
+		}
 	}
-	stick.IndexString(stick.Path(pinata, "Phone"), 3)
-	if err := stick.ClearError(); err != nil {
-		fmt.Println(err)
+	{
+		stick.Path(thePinata)
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("empty path must result in an error")
+		} else {
+			fmt.Println(err)
+		}
 	}
-	stick.PathString(pinata, "Address", "City", "Town")
-	if err := stick.ClearError(); err != nil {
-		fmt.Println(err)
+	{
+		stick.Path(thePinata, "nope")
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-existent path must result in an error")
+		} else {
+			fmt.Println(err)
+		}
+	}
+	{
+		stick.Path(thePinata, "nope", "nope")
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-existent path must result in an error")
+		} else {
+			fmt.Println(err)
+		}
+	}
+	{
+		stick.Path(thePinata, "Address", "nope", "nope")
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("non-existent path must result in an error")
+		} else {
+			fmt.Println(err)
+		}
+	}
+	{
+		stick.Path(thePinata, "Hobbies", "wrongtype", "Indoors")
+		err := stick.ClearError()
+		if err == nil {
+			t.Error("path that hits the wrong type must result in an error")
+		} else {
+			fmt.Println(err)
+		}
+	}
+	{
+		stick.Path(thePinata, "Address")
+		if err := stick.ClearError(); err != nil {
+			t.Error("Address must exist", err)
+		}
+	}
+	{
+		stick.Path(thePinata, "Address", "Street")
+		if err := stick.ClearError(); err != nil {
+			t.Error("Address/Street must exist", err)
+		}
+	}
+	{
+		stick.Path(thePinata, "Address", "City")
+		if err := stick.ClearError(); err != nil {
+			t.Error("Address/City must exist", err)
+		}
 	}
 }
 

@@ -23,8 +23,10 @@ type Stick interface {
 	// were successful.
 	Error() error
 
-	// ClearError clears the error. If there is no error the method has no effect.
-	ClearError()
+	// ClearError clears the error and returns it. If there is no error the
+	// method has no effect and returns nil, otherwise it returns the error that
+	// was cleared.
+	ClearError() error
 
 	// PathString gets the string value at the given path within the Pinata. The
 	// last element in the path must be a string, the rest must be a
@@ -65,6 +67,19 @@ type Stick interface {
 	// The input Pinata must hold a []interface{}.
 	IndexBool(Pinata, int) bool
 
+	// PathNil asserts nil value at the given path within the Pinata. The last
+	// element in the path must be a nil, the rest must be a
+	// map[string]interface{}. The input Pinata must hold a
+	// map[string]interface{} as well.
+	PathNil(Pinata, ...string)
+
+	// Nil asserts the Pinata holds a nil value.
+	Nil(Pinata)
+
+	// IndexNil asserts a nil value at the given index within the Pinata. The
+	// input Pinata must hold a []interface{}.
+	IndexNil(Pinata, int)
+
 	// Path gets the Pinata value at the given path within the Pinata. All
 	// elements in the path must be of type map[string]interface{}. The input
 	// Pinata must hold a map[string]interface{} as well.
@@ -79,8 +94,10 @@ type stick struct {
 	err error
 }
 
-func (s *stick) ClearError() {
+func (s *stick) ClearError() error {
+	err := s.err
 	s.err = nil
+	return err
 }
 
 func (s *stick) Error() error {
@@ -177,6 +194,20 @@ func (s *stick) internalBool(p Pinata, methodName string, input func() []interfa
 	return false
 }
 
+// this method assumes s.err != nil
+func (s *stick) internalNil(p Pinata, methodName string, input func() []interface{}) {
+	if p.Value() == nil {
+		return
+	}
+	if _, ok := p.Map(); ok {
+		s.unsupported(p.context, methodName, input, "this is a map")
+	}
+	if _, ok := p.Slice(); ok {
+		s.unsupported(p.context, methodName, input, "this is a slice")
+	}
+	s.unsupported(p.context, methodName, input, "this is not nil")
+}
+
 func (s *stick) String(p Pinata) string {
 	if s.err != nil {
 		return ""
@@ -196,6 +227,13 @@ func (s *stick) Float64(p Pinata) float64 {
 		return 0
 	}
 	return s.internalFloat64(p, "Float64", func() []interface{} { return nil })
+}
+
+func (s *stick) Nil(p Pinata) {
+	if s.err != nil {
+		return
+	}
+	s.internalNil(p, "Nil", func() []interface{} { return nil })
 }
 
 // this method assumes s.err != nil
@@ -267,6 +305,19 @@ func (s *stick) IndexBool(p Pinata, index int) bool {
 	}
 	pinata.context = p.context
 	return s.internalBool(pinata, methodName, func() []interface{} { return []interface{}{index} })
+}
+
+func (s *stick) IndexNil(p Pinata, index int) {
+	if s.err != nil {
+		return
+	}
+	const methodName = "IndexNil"
+	pinata := s.internalIndex(p, methodName, index)
+	if s.err != nil {
+		return
+	}
+	pinata.context = p.context
+	s.internalNil(pinata, methodName, func() []interface{} { return []interface{}{index} })
 }
 
 // this method assumes s.err != nil
@@ -386,6 +437,19 @@ func (s *stick) PathBool(p Pinata, path ...string) bool {
 	}
 	pinata.context = p.context
 	return s.internalBool(pinata, methodName, func() []interface{} { return toInterfaceSlice(path) })
+}
+
+func (s *stick) PathNil(p Pinata, path ...string) {
+	if s.err != nil {
+		return
+	}
+	const methodName = "PathNil"
+	pinata := s.internalPath(p, methodName, path...)
+	if s.err != nil {
+		return
+	}
+	pinata.context = p.context
+	s.internalNil(pinata, methodName, func() []interface{} { return toInterfaceSlice(path) })
 }
 
 // Pinata holds the data.

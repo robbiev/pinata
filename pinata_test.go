@@ -44,7 +44,7 @@ func ExampleStick() {
 		City:  stick.PathString(pinata, "Address", "City"),
 	}
 
-	if err := stick.Error(); err != nil {
+	if err := stick.ClearError(); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -81,18 +81,56 @@ func TestPinata(t *testing.T) {
 	stick, pinata := pinata.New(m)
 
 	stick.PathString(pinata, "Phone")
-	if err := stick.Error(); err != nil {
+	if err := stick.ClearError(); err != nil {
 		fmt.Println(err)
-		stick.ClearError()
 	}
 	stick.IndexString(stick.Path(pinata, "Phone"), 3)
-	if err := stick.Error(); err != nil {
+	if err := stick.ClearError(); err != nil {
 		fmt.Println(err)
-		stick.ClearError()
 	}
 	stick.PathString(pinata, "Address", "City", "Town")
-	if err := stick.Error(); err != nil {
+	if err := stick.ClearError(); err != nil {
 		fmt.Println(err)
-		stick.ClearError()
+	}
+}
+
+func TestNullvsAbsent(t *testing.T) {
+	const message = `
+	{
+		"Name": "Kevin",
+		"Phone": ["+44 20 7123 4567", "+44 20 4567 7123"],
+		"Address": {
+			"Street": "1 Gopher Road",
+			"City": null
+		}
+	}`
+
+	var m map[string]interface{}
+
+	err := json.Unmarshal([]byte(message), &m)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	stick, pinata := pinata.New(m)
+	stick.PathNil(pinata, "Address", "City")
+	if err := stick.ClearError(); err != nil {
+		t.Errorf("error: %s", err)
+	}
+
+	stick.PathNil(pinata, "Address")
+	if err := stick.ClearError(); err == nil {
+		t.Error("Address must not be nil")
+	}
+
+	stick.PathNil(pinata, "Address", "DoesNotExist")
+	if err := stick.ClearError(); err == nil {
+		t.Error("non-existent path must not be nil")
+	}
+
+	_ = stick.Path(pinata, "does", "not", "exist")
+	if err := stick.ClearError(); err == nil {
+		t.Error("non-existent path must result in an error")
 	}
 }

@@ -8,6 +8,9 @@
 // this "late" error handling design special care is taken to return good
 // errors so you can still find out where things went wrong.
 //
+// Here's an example:
+// https://godoc.org/github.com/robbiev/pinata#example-Stick
+//
 // This API is not thread safe.
 package pinata
 

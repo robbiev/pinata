@@ -39,14 +39,14 @@ type Stick interface {
 	// The input Pinata must hold a []interface{}.
 	IndexString(Pinata, int) string
 
-	// PathPinata gets the Pinata value at the given path within the Pinata. All
+	// Path gets the Pinata value at the given path within the Pinata. All
 	// elements in the path must be of type map[string]interface{}. The input
 	// Pinata must hold a map[string]interface{} as well.
-	PathPinata(Pinata, ...string) Pinata
+	Path(Pinata, ...string) Pinata
 
-	// IndexString gets the Pinata value at the given index within the Pinata.
+	// Index gets the Pinata value at the given index within the Pinata.
 	// The input Pinata must hold a []interface{}.
-	IndexPinata(Pinata, int) Pinata
+	Index(Pinata, int) Pinata
 }
 
 type stick struct {
@@ -123,7 +123,7 @@ func (s *stick) String(p Pinata) string {
 }
 
 // this method assumes s.err != nil
-func (s *stick) internalIndexPinata(p Pinata, methodName string, index int) Pinata {
+func (s *stick) internalIndex(p Pinata, methodName string, index int) Pinata {
 	if slice, ok := p.Slice(); ok {
 		if index < 0 || index >= len(slice) {
 			s.err = &Error{
@@ -147,11 +147,11 @@ func (s *stick) internalIndexPinata(p Pinata, methodName string, index int) Pina
 	return Pinata{}
 }
 
-func (s *stick) IndexPinata(p Pinata, index int) Pinata {
+func (s *stick) Index(p Pinata, index int) Pinata {
 	if s.err != nil {
 		return Pinata{}
 	}
-	return s.internalIndexPinata(p, "IndexPinata", index)
+	return s.internalIndex(p, "Index", index)
 }
 
 func (s *stick) IndexString(p Pinata, index int) string {
@@ -159,7 +159,7 @@ func (s *stick) IndexString(p Pinata, index int) string {
 		return ""
 	}
 	const methodName = "IndexString"
-	pinata := s.internalIndexPinata(p, methodName, index)
+	pinata := s.internalIndex(p, methodName, index)
 	if s.err != nil {
 		return ""
 	}
@@ -168,7 +168,7 @@ func (s *stick) IndexString(p Pinata, index int) string {
 }
 
 // this method assumes s.err != nil
-func (s *stick) internalPathPinata(p Pinata, methodName string, path ...string) Pinata {
+func (s *stick) internalPath(p Pinata, methodName string, path ...string) Pinata {
 	contents, ok := p.Map()
 
 	if !ok {
@@ -240,11 +240,11 @@ func (s *stick) internalPathPinata(p Pinata, methodName string, path ...string) 
 	return Pinata{}
 }
 
-func (s *stick) PathPinata(p Pinata, path ...string) Pinata {
+func (s *stick) Path(p Pinata, path ...string) Pinata {
 	if s.err != nil {
 		return Pinata{}
 	}
-	return s.internalPathPinata(p, "PathPinata", path...)
+	return s.internalPath(p, "Path", path...)
 }
 
 func (s *stick) PathString(p Pinata, path ...string) string {
@@ -252,7 +252,7 @@ func (s *stick) PathString(p Pinata, path ...string) string {
 		return ""
 	}
 	const methodName = "PathString"
-	pinata := s.internalPathPinata(p, methodName, path...)
+	pinata := s.internalPath(p, methodName, path...)
 	if s.err != nil {
 		return ""
 	}

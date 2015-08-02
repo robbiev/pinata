@@ -40,7 +40,7 @@ func ExampleStick() {
 	// no error handling here
 	kevin := gopher{
 		Name:  stick.PathString(pinata, "Name"),
-		Phone: stick.IndexString(stick.PathPinata(pinata, "Phone"), 0),
+		Phone: stick.IndexString(stick.Path(pinata, "Phone"), 0),
 		City:  stick.PathString(pinata, "Address", "City"),
 	}
 
@@ -85,7 +85,7 @@ func TestPinata(t *testing.T) {
 		fmt.Println(err)
 		stick.ClearError()
 	}
-	stick.IndexString(stick.PathPinata(pinata, "Phone"), 3)
+	stick.IndexString(stick.Path(pinata, "Phone"), 3)
 	if err := stick.Error(); err != nil {
 		fmt.Println(err)
 		stick.ClearError()
